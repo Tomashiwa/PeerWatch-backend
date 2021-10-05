@@ -1,13 +1,16 @@
 import React, { useState } from "react";
+import { useParams } from "react-router";
 import Chatbox from "../../components/ChatBox/Chatbox";
 import RoomSettings from "../../components/RoomSettings/RoomSettings";
 import VideoLinker from "../../components/VideoLinker/VideoLinker";
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import Watchmates from "../../components/Watchmates/Watchmates";
 import RoomPageWrapper from "./Room.styled";
+import { io } from "socket.io-client";
+import URL from "../../util/url";
 
 const initialPlayerState = {
-	url: "https://www.youtube.com/watch?v=YHXB1xp-xXc",
+	url: "https://www.youtube.com/playlist?list=PL8PZB25uZuZ7gOShaethulz7JaLCyk9Tp",
 	playing: true,
 	syncTime: 0,
 	syncType: "seconds",
@@ -39,11 +42,13 @@ const initialSettings = {
 };
 
 function Room() {
+	const { id } = useParams();
 	const [playerState, setPlayerState] = useState(initialPlayerState);
 	const [users, setUsers] = useState(initialUsers);
 	const [settings, setSettings] = useState(initialSettings);
 
-	// SOCKET.IO related stuff will be handled here
+	// Solely for the Room page
+	const [socket] = useState(io(URL.LOCAL_SERVER_URL));
 
 	const playCallback = () => {
 		console.log("VIDEO PLAYS");
@@ -82,7 +87,7 @@ function Room() {
 			<div className="room-sidebar">
 				<VideoLinker linkCallback={linkCallback} />
 				<Watchmates users={users} />
-				<Chatbox />
+				<Chatbox socket={socket} roomId={id} />
 				<RoomSettings
 					capacity={settings.capacity}
 					users={settings.users}

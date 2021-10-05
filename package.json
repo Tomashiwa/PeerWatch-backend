@@ -4,6 +4,7 @@
   "description": "A website to watch YouTube video together with your friends or family in sync",
   "main": "server.js",
   "scripts": {
+    "install-all": "npm install && cd client && npm install",
     "client-install": "npm install --prefix client",
     "start": "node server.js",
     "server": "nodemon server.js",
@@ -27,7 +28,8 @@
     "concurrently": "^6.2.2",
     "express": "^4.17.1",
     "mysql2": "^2.3.0",
-    "nodemon": "^2.0.13"
+    "nodemon": "^2.0.13",
+    "socket.io": "^4.2.0"
   },
   "devDependencies": {
     "cypress": "^8.5.0",

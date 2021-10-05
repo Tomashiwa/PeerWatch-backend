@@ -18,7 +18,7 @@ function App() {
 					</div>
 					<div className="app-content">
 						<Switch>
-							<Route path="/room">
+							<Route path="/room/:id">
 								<Room />
 							</Route>
 							<Route path="/">

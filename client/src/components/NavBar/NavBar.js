@@ -1,16 +1,16 @@
-import { Typography } from '@mui/material'
-import React from 'react'
-import { Link } from "react-router-dom"
-import NavBarWrapper from "./NavBar.styled"
+import { Typography } from "@mui/material";
+import React from "react";
+import { Link } from "react-router-dom";
+import NavBarWrapper from "./NavBar.styled";
 
 function NavBar() {
-    return (
-        <NavBarWrapper>
-          <Typography variant="h4">PeerWatch</Typography>
-          <Link to="/">Home</Link>
-          <Link to="/room">Room</Link>
-        </NavBarWrapper>
-    )
+	return (
+		<NavBarWrapper>
+			<Typography variant="h4">PeerWatch</Typography>
+			<Link to="/">Home</Link>
+			<Link to="/room/123">Room</Link>
+		</NavBarWrapper>
+	);
 }
 
-export default NavBar
+export default NavBar;
