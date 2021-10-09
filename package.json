@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/CS3219-SE-Principles-and-Patterns/cs3219-project-ay2122-2122-s1-g37#readme",
   "dependencies": {
+    "@socket.io/admin-ui": "^0.2.0",
     "concurrently": "^6.2.2",
     "express": "^4.17.1",
     "mysql2": "^2.3.0",

@@ -37,12 +37,14 @@ function Chatbox({ socket, roomId }) {
 
 	// Reset socket event handlers when Chatbox re-render
 	useEffect(() => {
-		socket.on("connect", initialize);
-		socket.on("receive-message", receiveMessage);
-		return () => {
-			socket.off("connect", initialize);
-			socket.off("receive-message", receiveMessage);
-		};
+		if (socket) {
+			socket.on("connect", initialize);
+			socket.on("receive-message", receiveMessage);
+			return () => {
+				socket.off("connect", initialize);
+				socket.off("receive-message", receiveMessage);
+			};
+		}
 	}, [socket, initialize, receiveMessage]);
 
 	return (

@@ -1,5 +1,9 @@
 module.exports = (io) => {
-	io.on("connection", (socket) => {
+	const chatIO = io.of("/chat");
+
+	chatIO.on("connection", (socket) => {
+		console.log(`${socket.id} connected to chatIO`);
+
 		// Upon client sending message.
 		socket.on("send-message", (msg, roomId) => {
 			console.log(`Message received: ${msg}`);
