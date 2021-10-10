@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router";
 import Chatbox from "../../components/ChatBox/Chatbox";
 import RoomSettings from "../../components/RoomSettings/RoomSettings";
@@ -15,17 +15,6 @@ const initialPlayerState = {
 	syncTime: 0,
 	syncType: "seconds",
 };
-
-const initialUsers = [
-	{ id: 1, name: "User1", isHost: true },
-	{ id: 2, name: "User2", isHost: false },
-	{ id: 3, name: "User3", isHost: false },
-	{ id: 4, name: "User4", isHost: false },
-	{ id: 5, name: "User5", isHost: false },
-	{ id: 6, name: "User6", isHost: false },
-	{ id: 7, name: "User7", isHost: false },
-	{ id: 8, name: "User8", isHost: false },
-];
 
 const initialSettings = {
 	capacity: 15,
@@ -44,7 +33,7 @@ const initialSettings = {
 function Room() {
 	const { id } = useParams();
 	const [playerState, setPlayerState] = useState(initialPlayerState);
-	const [users, setUsers] = useState(initialUsers);
+	const [users, setUsers] = useState([]);
 	const [settings, setSettings] = useState(initialSettings);
 
 	const [chatSocket, setChatSocket] = useState(null);
@@ -73,6 +62,19 @@ function Room() {
 			newVideoSocket.disconnect();
 		};
 	}, []);
+
+	const updateUserList = useCallback((newUserList) => {
+		setUsers(newUserList);
+	}, [setUsers]);
+	
+	useEffect(() => {
+		if (chatSocket) {
+			chatSocket.on("update-user-list", updateUserList);
+			return () => {
+				chatSocket.off("update-user-list", updateUserList);
+			};
+		}
+	}, [chatSocket, updateUserList]);
 
 	return (
 		<RoomPageWrapper>

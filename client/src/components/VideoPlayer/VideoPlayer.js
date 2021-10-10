@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player/youtube";
 
 const initialState = {
-	url: "https://www.youtube.com/watch?v=q5WbrPwidrY",
+	url: "https://www.youtube.com/watch?v=7h2-n-39ofw",
 	playing: true,
 	syncTime: 0,
 	syncType: "seconds",
