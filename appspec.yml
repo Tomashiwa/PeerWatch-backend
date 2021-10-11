@@ -1,0 +1,14 @@
+version: 0.0
+os: linux
+files:
+  - source: .
+    destiantion: /home/ec2-user/cs3219-project-ay2122-2122-s1-g37
+hooks:
+  ServerStart:
+  - location: scripts/start_server.sh
+    timeout: 300
+    runas: root
+  ClientStart:
+  - location: scripts/start_client.sh
+    timeout: 300
+    runas: root
