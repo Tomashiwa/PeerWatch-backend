@@ -4,12 +4,15 @@
   "description": "A website to watch YouTube video together with your friends or family in sync",
   "main": "server.js",
   "scripts": {
+    "install-all": "npm install && cd client && npm install",
     "client-install": "npm install --prefix client",
     "start": "node server.js",
     "server": "nodemon server.js",
     "client": "npm start --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cypress-test": "npx cypress run",
+    "jest-test": "jest"
   },
   "repository": {
     "type": "git",
@@ -22,9 +25,15 @@
   },
   "homepage": "https://github.com/CS3219-SE-Principles-and-Patterns/cs3219-project-ay2122-2122-s1-g37#readme",
   "dependencies": {
+    "@socket.io/admin-ui": "^0.2.0",
     "concurrently": "^6.2.2",
     "express": "^4.17.1",
     "mysql2": "^2.3.0",
-    "nodemon": "^2.0.13"
+    "nodemon": "^2.0.13",
+    "socket.io": "^4.2.0"
+  },
+  "devDependencies": {
+    "cypress": "^8.5.0",
+    "jest": "26.6.0"
   }
 }
