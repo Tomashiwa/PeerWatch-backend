@@ -20,7 +20,7 @@ const io = new Server(server, {
 });
 
 // Add events, middlewares and other addons to the socket
-require("./services/chatKit")(io);
+require("./services/roomKit")(io);
 require("./services/videoKit")(io);
 
 // Admin tool for socket.io

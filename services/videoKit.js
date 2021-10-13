@@ -22,8 +22,7 @@ module.exports = (io) => {
 				roomSocketMap.set(roomId, [socket.id]);
 			}
 
-			// Return whether the new socket is a host
-			callback(roomSocketMap.get(roomId).length == 1);
+			callback();
 		});
 
 		socket.on("disconnect", () => {
@@ -31,10 +30,6 @@ module.exports = (io) => {
 				const roomId = socketRoomMap.get(socket.id);
 				const newSockets = roomSocketMap.get(roomId).filter((id) => id != socket.id);
 				roomSocketMap.set(roomId, newSockets);
-
-				if (newSockets.length > 0) {
-					videoIO.to(newSockets[0]).emit("HOST_STATUS", true);
-				}
 			}
 		});
 
@@ -55,6 +50,53 @@ module.exports = (io) => {
 			} else {
 				socket.to(roomId).emit("RECEIVE_TIMING", timing);
 				console.log(`${socket.id} sent a timing of ${timing.timing} to room ${roomId}`);
+			}
+		});
+
+		// 4. Ask all other users to wait
+		socket.on("REQUEST_HOLD", (roomId) => {
+			if (roomId === "") {
+				console.log(`Invalid room ID: ${roomId}`);
+			} else {
+				socket.to(roomId).emit("HOLD", socket.id);
+				console.log(`${socket.id} ask all other users to hold`);
+			}
+		});
+
+		socket.on("REQUEST_RELEASE", (roomId, newTiming) => {
+			if (roomId === "") {
+				console.log(`Invalid room ID: ${roomId}`);
+			} else {
+				socket.to(roomId).emit("PREPARE_RELEASE", newTiming);
+			}
+		});
+
+		socket.on("REQUEST_RELEASE_READY", (buffererId) => {
+			socket.to(buffererId).emit("RELEASE_READY");
+		});
+
+		// 5. Ask all other users to go
+		socket.on("REQUEST_RELEASE_ALL", (roomId) => {
+			if (roomId === "") {
+				console.log(`Invalid room ID: ${roomId}`);
+			} else {
+				socket.to(roomId).emit("RELEASE");
+			}
+		});
+
+		socket.on("PLAY_ALL", (roomId) => {
+			if (roomId === "") {
+				console.log(`Invalid room ID: ${roomId}`);
+			} else {
+				socket.to(roomId).emit("PLAY");
+			}
+		});
+
+		socket.on("PAUSE_ALL", (roomId) => {
+			if (roomId === "") {
+				console.log(`Invalid room ID: ${roomId}`);
+			} else {
+				socket.to(roomId).emit("PAUSE");
 			}
 		});
 	});
