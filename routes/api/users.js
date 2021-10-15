@@ -1,6 +1,8 @@
 const express = require("express");
 const db = require("../../services/db");
 const router = express.Router();
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 // Temporary routes to test mysql2 library
 router.get("/createtable", (req, res) => {
@@ -14,20 +16,59 @@ router.get("/createtable", (req, res) => {
     })
 });
 
-router.post("/", (req, res) => {
-    const { name, password } = req.body;
-    if(!name || !password) {
-        return res.status(400).json({message: "Please enter all fields (name & password) to become an user"});
+router.post("/create", (req, res) => {
+    const { email, name, password, isGoogle } = req.body;
+    if (!name || !password || !email) {
+        return res.status(400).json({message: "Please enter all fields (email, name & password) to become an user"});
     }
+    bcrypt.hash(password, saltRounds, (err, hash) => {
+        if (err) {
+            return res.status(500).json({message: err.message});
+        }
+        let newUser = {
+            "email": email,
+            "display_name": name,
+            "password": hash,
+            "is_google": !!isGoogle
+        };
+        const sql = "INSERT INTO users SET ?";
+        db.query(sql, newUser, (derr, dres) => {
+            if(derr) {
+                return res.status(500).json({message: derr.message});
+            }
+            console.log(dres);
+            res.status(200).json({message: "User created..."});
+        });
+    });
+});
 
-    const sql = "INSERT INTO users SET ?";
-    db.query(sql, req.body, (derr, dres) => {
+router.post("/login", (req, res) => {
+    const { email, password, isGoogle } = req.body;
+    if (!password || !email) {
+        return res.status(400).json({message: "Please enter all fields (email & password) to login"});
+    }
+    const sql = "SELECT * FROM users WHERE email = ?";
+    db.query(sql, [email], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
         }
         console.log(dres);
-        res.status(200).json({message: "User created..."});
+        if (dres.length.length == 0) {
+            return res.status(500).json({message: "Email does not exist"});
+        }
+
+        bcrypt.compare(password, dres[0].password, (err, comparison) => {
+            if (err) {
+                return res.status(500).json({message: err.message});
+            }
+            if (dres[0].is_google == 1) {
+                res.status(500).json({message: "Please login via Google Auth"})
+            } else if (comparison) {
+                res.status(200).json({message: "Login success"});
+            } else {
+                res.status(500).json({message: "Wrong password"});
+            }
+        });
     });
 });
-
 module.exports = router;
