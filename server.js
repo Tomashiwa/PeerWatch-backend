@@ -1,3 +1,4 @@
+const ping = require('./routes/api/ping');
 const express = require("express");
 const app = express();
 const { instrument } = require("@socket.io/admin-ui");
@@ -6,6 +7,7 @@ const users = require("./routes/api/users");
 const { Server } = require("socket.io");
 
 app.use(express.json());
+app.get("/ping", ping);
 app.use("/api/users", users);
 
 const server = app.listen("5000", () => {
