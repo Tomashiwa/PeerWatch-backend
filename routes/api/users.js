@@ -53,7 +53,7 @@ router.post("/login", (req, res) => {
             return res.status(500).json({message: derr.message});
         }
         console.log(dres);
-        if (dres.length.length == 0) {
+        if (dres.length == 0) {
             return res.status(500).json({message: "Email does not exist"});
         }
 
