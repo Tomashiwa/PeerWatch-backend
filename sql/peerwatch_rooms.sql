@@ -27,8 +27,8 @@ DROP TABLE IF EXISTS `rooms`;
 CREATE TABLE `rooms` (
   `id` int NOT NULL,
   `userid` int NOT NULL,
-  `url` varchar(255) NOT NULL,
-  `capacity` int NOT NULL,
+  `url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `capacity` int NOT NULL DEFAULT '15',
   PRIMARY KEY (`id`),
   KEY `fk_user` (`userid`),
   CONSTRAINT `fk_user` FOREIGN KEY (`userid`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -41,6 +41,7 @@ CREATE TABLE `rooms` (
 
 LOCK TABLES `rooms` WRITE;
 /*!40000 ALTER TABLE `rooms` DISABLE KEYS */;
+INSERT INTO `rooms` VALUES (999,5,'',15);
 /*!40000 ALTER TABLE `rooms` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -53,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-10-16  4:44:13
+-- Dump completed on 2021-10-16  5:16:54
