@@ -8,7 +8,7 @@ const rooms = require("./routes/api/rooms");
 const { Server } = require("socket.io");
 
 app.use(express.json());
-app.get("/ping", ping);
+app.get("/api/ping", ping);
 app.use("/api/users", users);
 app.use("/api/rooms", rooms);
 
