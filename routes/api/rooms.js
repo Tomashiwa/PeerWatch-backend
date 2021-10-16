@@ -37,8 +37,8 @@ router.put("/url/update", (req, res) => {
     });
 });
 
-router.post("/url", (req, res) => {
-    const { roomid } = req.body;
+router.get("/url", (req, res) => {
+    const { roomid } = req.query;
     const sql = "SELECT url FROM rooms WHERE id = ?";
     db.query(sql, [roomid], (derr, dres) => {
         if(derr) {
