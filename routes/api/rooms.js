@@ -22,7 +22,7 @@ router.post("/create", (req, res) => {
 
 });
 
-router.post("/url/update", (req, res) => {
+router.put("/url/update", (req, res) => {
     const { roomid, url } = req.body;
     const sql = "UPDATE rooms SET url = ? WHERE id = ?";
     db.query(sql, [url, roomid], (derr, dres) => {
@@ -30,6 +30,9 @@ router.post("/url/update", (req, res) => {
             return res.status(500).json({message: derr.message});
         }
         console.log(dres);
+        if (dres.affectedRows == 0) {
+            return res.status(500).json({message: "Room does not exist"});
+        }
         res.status(200).json({message: "URL updated..."});
     });
 });
@@ -46,6 +49,21 @@ router.post("/url", (req, res) => {
             return res.status(500).json({message: "Room does not exist"});
         }
         res.status(200).json({url: dres[0].url});
+    });
+});
+
+router.delete("/delete", (req, res) => {
+    const { roomid } = req.body;
+    const sql = "DELETE FROM rooms WHERE id = ?";
+    db.query(sql, [roomid], (derr, dres) => {
+        if(derr) {
+            return res.status(500).json({message: derr.message});
+        }
+        console.log(dres);
+        if (dres.affectedRows == 0) {
+            return res.status(500).json({message: "Room does not exist"});
+        }
+        res.status(200).json({message: "Room deleted..."});
     });
 });
 
