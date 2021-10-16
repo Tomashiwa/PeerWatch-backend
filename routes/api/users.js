@@ -71,4 +71,37 @@ router.post("/login", (req, res) => {
         });
     });
 });
+
+router.put("/password", (req, res) => {
+    const { userid, password } = req.body
+    bcrypt.hash(password, saltRounds, (err, hash) => {
+        if (err) {
+            return res.status(500).json({message: err.message});
+        }
+        const sql = "UPDATE users SET password = ? WHERE id = ?";
+        db.query(sql, [hash, userid], (derr, dres) => {
+            if(derr) {
+                return res.status(500).json({message: derr.message});
+            }
+            console.log(dres);
+            res.status(200).json({message: "Password updated..."});
+        });
+    });
+});
+
+router.put("/name", (req, res) => {
+    const { name, userid } = req.body;
+    const sql = "UPDATE users SET display_name = ? WHERE id = ?";
+    db.query(sql, [name, userid], (derr, dres) => {
+        if(derr) {
+            return res.status(500).json({message: derr.message});
+        }
+        console.log(dres);
+        if (dres.affectedRows == 0) {
+            return res.status(500).json({message: "User does not exist"});
+        }
+        res.status(200).json({message: "Name updated..."});
+    });
+});
+
 module.exports = router;
