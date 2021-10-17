@@ -3,12 +3,13 @@ const db = require("../../services/db");
 const router = express.Router();
 
 router.post("/create", (req, res) => {
-    const { userid, roomid, capacity } = req.body;
+    const { userid, roomid, capacity, url } = req.body;
 
     let newRoom = {
         "id": roomid,
         "userid": userid,
-        "capacity": capacity
+        "capacity": capacity,
+        "url": url
     };
 
     const sql = "INSERT INTO rooms SET ?";
