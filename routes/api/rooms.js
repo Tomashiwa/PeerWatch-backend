@@ -3,11 +3,11 @@ const db = require("../../services/db");
 const router = express.Router();
 
 router.post("/create", (req, res) => {
-    const { userid, roomid, capacity, url } = req.body;
+    const { hostId, roomId, capacity, url } = req.body;
 
     let newRoom = {
-        "id": roomid,
-        "userid": userid,
+        "id": roomId,
+        "host_id": hostId,
         "capacity": capacity,
         "url": url
     };
@@ -23,10 +23,10 @@ router.post("/create", (req, res) => {
 
 });
 
-router.get("/:roomid", (req, res) => {
-    const roomid  = req.params.roomid;
+router.get("/:roomId", (req, res) => {
+    const roomId  = req.params.roomId;
     const sql = "SELECT * FROM rooms WHERE id = ?";
-    db.query(sql, [roomid], (derr, dres) => {
+    db.query(sql, [roomId], (derr, dres) => {
         if(derr) {
           return res.status(500).json({message: derr.message});
         }
@@ -39,9 +39,9 @@ router.get("/:roomid", (req, res) => {
 });
 
 router.put("/url", (req, res) => {
-    const { roomid, url } = req.body;
+    const { roomId, url } = req.body;
     const sql = "UPDATE rooms SET url = ? WHERE id = ?";
-    db.query(sql, [url, roomid], (derr, dres) => {
+    db.query(sql, [url, roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
         }
@@ -54,9 +54,9 @@ router.put("/url", (req, res) => {
 });
 
 router.put("/capacity", (req, res) => {
-    const { roomid, capacity } = req.body;
+    const { roomId, capacity } = req.body;
     const sql = "UPDATE rooms SET capacity = ? WHERE id = ?";
-    db.query(sql, [capacity, roomid], (derr, dres) => {
+    db.query(sql, [capacity, roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
         }
@@ -69,9 +69,9 @@ router.put("/capacity", (req, res) => {
 });
 
 router.put("/host", (req, res) => {
-    const { roomid, userid } = req.body;
-    const sql = "UPDATE rooms SET userid = ? WHERE id = ?";
-    db.query(sql, [userid, roomid], (derr, dres) => {
+    const { roomId, hostId } = req.body;
+    const sql = "UPDATE rooms SET host_id = ? WHERE id = ?";
+    db.query(sql, [hostId, roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
         }
@@ -84,9 +84,9 @@ router.put("/host", (req, res) => {
 });
 
 router.delete("/delete", (req, res) => {
-    const { roomid } = req.body;
+    const { roomId } = req.body;
     const sql = "DELETE FROM rooms WHERE id = ?";
-    db.query(sql, [roomid], (derr, dres) => {
+    db.query(sql, [roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
         }

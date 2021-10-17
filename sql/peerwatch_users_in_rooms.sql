@@ -25,14 +25,14 @@ DROP TABLE IF EXISTS `users_in_rooms`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users_in_rooms` (
-  `userid` int NOT NULL,
-  `roomid` int NOT NULL,
+  `user_id` int NOT NULL,
+  `room_id` int NOT NULL,
   `chat_permission` tinyint(1) NOT NULL,
   `add_video_permission` tinyint(1) NOT NULL,
-  PRIMARY KEY (`userid`,`roomid`),
-  KEY `fk_users_in_rooms_rooms` (`roomid`),
-  CONSTRAINT `fk_users_in_rooms_rooms` FOREIGN KEY (`roomid`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_users_in_rooms_users` FOREIGN KEY (`userid`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  PRIMARY KEY (`user_id`,`room_id`) USING BTREE,
+  KEY `fk_users_in_rooms_rooms` (`room_id`) USING BTREE,
+  CONSTRAINT `fk_users_in_rooms_rooms` FOREIGN KEY (`room_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_users_in_rooms_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -54,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-10-16  4:44:13
+-- Dump completed on 2021-10-17 16:24:28

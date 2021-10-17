@@ -73,13 +73,13 @@ router.post("/login", (req, res) => {
 });
 
 router.put("/password", (req, res) => {
-    const { userid, password } = req.body
+    const { userId, password } = req.body
     bcrypt.hash(password, saltRounds, (err, hash) => {
         if (err) {
             return res.status(500).json({message: err.message});
         }
         const sql = "UPDATE users SET password = ? WHERE id = ?";
-        db.query(sql, [hash, userid], (derr, dres) => {
+        db.query(sql, [hash, userId], (derr, dres) => {
             if(derr) {
                 return res.status(500).json({message: derr.message});
             }
@@ -90,9 +90,9 @@ router.put("/password", (req, res) => {
 });
 
 router.put("/name", (req, res) => {
-    const { name, userid } = req.body;
+    const { name, userId } = req.body;
     const sql = "UPDATE users SET display_name = ? WHERE id = ?";
-    db.query(sql, [name, userid], (derr, dres) => {
+    db.query(sql, [name, userId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
         }

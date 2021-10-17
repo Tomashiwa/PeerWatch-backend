@@ -26,12 +26,12 @@ DROP TABLE IF EXISTS `rooms`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `rooms` (
   `id` int NOT NULL,
-  `userid` int NOT NULL,
+  `host_id` int NOT NULL,
   `url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `capacity` int NOT NULL DEFAULT '15',
   PRIMARY KEY (`id`),
-  KEY `fk_user` (`userid`),
-  CONSTRAINT `fk_user` FOREIGN KEY (`userid`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+  KEY `fk_rooms_users` (`host_id`),
+  CONSTRAINT `fk_rooms_users` FOREIGN KEY (`host_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -41,7 +41,7 @@ CREATE TABLE `rooms` (
 
 LOCK TABLES `rooms` WRITE;
 /*!40000 ALTER TABLE `rooms` DISABLE KEYS */;
-INSERT INTO `rooms` VALUES (999,5,'',15);
+INSERT INTO `rooms` VALUES (995,5,'3243243244452245524432',999),(999,6,'32432432432',12);
 /*!40000 ALTER TABLE `rooms` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -54,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-10-16  5:16:54
+-- Dump completed on 2021-10-17 16:24:28
