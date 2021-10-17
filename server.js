@@ -3,10 +3,12 @@ const app = express();
 const { instrument } = require("@socket.io/admin-ui");
 
 const users = require("./routes/api/users");
+const auth = require("./routes/api/auth");
 const { Server } = require("socket.io");
 
 app.use(express.json());
 app.use("/api/users", users);
+app.use("/api/auth", auth)
 
 const server = app.listen("5000", () => {
 	console.log("Server started on port 5000...");
