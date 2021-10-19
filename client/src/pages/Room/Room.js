@@ -10,7 +10,7 @@ import { io } from "socket.io-client";
 import URL from "../../util/url";
 
 const initialPlayerState = {
-	url: "https://www.youtube.com/watch?v=q5WbrPwidrY",
+	url: "",
 	playing: true,
 	syncTime: 0,
 	syncType: "seconds",
@@ -30,9 +30,16 @@ const initialSettings = {
 	],
 };
 
+const blankUser = {
+	id: "",
+	name: "",
+	isHost: false,
+};
+
 function Room() {
 	const { id } = useParams();
 	const [playerState, setPlayerState] = useState(initialPlayerState);
+	const [user, setUser] = useState(blankUser);
 	const [users, setUsers] = useState([]);
 	const [settings, setSettings] = useState(initialSettings);
 
@@ -63,10 +70,21 @@ function Room() {
 		};
 	}, []);
 
-	const updateUserList = useCallback((newUserList) => {
-		setUsers(newUserList);
-	}, [setUsers]);
-	
+	const updateUserList = useCallback(
+		(newUserList) => {
+			if (chatSocket) {
+				for (let i = 0; i < newUserList.length; i++) {
+					if (newUserList[i].id === chatSocket.id) {
+						setUser(newUserList[i]);
+						break;
+					}
+				}
+			}
+			setUsers(newUserList);
+		},
+		[setUsers, chatSocket]
+	);
+
 	useEffect(() => {
 		if (chatSocket) {
 			chatSocket.on("update-user-list", updateUserList);
@@ -80,7 +98,13 @@ function Room() {
 		<RoomPageWrapper>
 			<div className="room-player">
 				<div className="room-res-wrapper">
-					<VideoPlayer {...playerState} socket={videoSocket} roomId={id} />
+					<VideoPlayer
+						{...playerState}
+						users={users}
+						user={user}
+						socket={videoSocket}
+						roomId={id}
+					/>
 				</div>
 			</div>
 			<div className="room-sidebar">
