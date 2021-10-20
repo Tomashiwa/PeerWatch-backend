@@ -6,8 +6,8 @@ router.post("/create", (req, res) => {
     const { hostId, roomId, capacity, url } = req.body;
 
     let newRoom = {
-        "id": roomId,
-        "host_id": hostId,
+        "roomId": roomId,
+        "hostId": hostId,
         "url": url
     };
     if (capacity != null) {
@@ -27,7 +27,7 @@ router.post("/create", (req, res) => {
 
 router.get("/:roomId", (req, res) => {
     const roomId  = req.params.roomId;
-    const sql = "SELECT * FROM rooms WHERE id = ?";
+    const sql = "SELECT * FROM rooms WHERE roomId = ?";
     db.query(sql, [roomId], (derr, dres) => {
         if(derr) {
           return res.status(500).json({message: derr.message});
@@ -42,7 +42,7 @@ router.get("/:roomId", (req, res) => {
 
 router.put("/url", (req, res) => {
     const { roomId, url } = req.body;
-    const sql = "UPDATE rooms SET url = ? WHERE id = ?";
+    const sql = "UPDATE rooms SET url = ? WHERE roomId = ?";
     db.query(sql, [url, roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
@@ -57,7 +57,7 @@ router.put("/url", (req, res) => {
 
 router.put("/capacity", (req, res) => {
     const { roomId, capacity } = req.body;
-    const sql = "UPDATE rooms SET capacity = ? WHERE id = ?";
+    const sql = "UPDATE rooms SET capacity = ? WHERE roomId = ?";
     db.query(sql, [capacity, roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
@@ -72,7 +72,7 @@ router.put("/capacity", (req, res) => {
 
 router.put("/host", (req, res) => {
     const { roomId, hostId } = req.body;
-    const sql = "UPDATE rooms SET host_id = ? WHERE id = ?";
+    const sql = "UPDATE rooms SET hostId = ? WHERE roomId = ?";
     db.query(sql, [hostId, roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
@@ -87,7 +87,7 @@ router.put("/host", (req, res) => {
 
 router.delete("/delete", (req, res) => {
     const { roomId } = req.body;
-    const sql = "DELETE FROM rooms WHERE id = ?";
+    const sql = "DELETE FROM rooms WHERE roomId = ?";
     db.query(sql, [roomId], (derr, dres) => {
         if(derr) {
             return res.status(500).json({message: derr.message});
