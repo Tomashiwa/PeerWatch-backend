@@ -8,9 +8,11 @@ router.post("/create", (req, res) => {
     let newRoom = {
         "id": roomId,
         "host_id": hostId,
-        "capacity": capacity,
         "url": url
     };
+    if (capacity != null) {
+        newRoom.capacity = capacity;
+    }
 
     const sql = "INSERT INTO rooms SET ?";
     db.query(sql, newRoom, (derr, dres) => {
