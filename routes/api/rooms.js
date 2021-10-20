@@ -100,4 +100,61 @@ router.delete("/delete", (req, res) => {
     });
 });
 
+router.post("/join", (req, res) => {
+    const { userId, roomId } = req.body;
+    let user = {
+        "userId": userId,
+        "roomId": roomId
+    }
+    const sql = "INSERT INTO users_in_rooms SET ?";
+    db.query(sql, user, (derr, dres) => {
+        if(derr) {
+            return res.status(500).json({message: derr.message});
+        }
+        console.log(dres);
+        res.status(200).json({message: "User joined room.."});
+    });
+});
+
+router.get("/:roomId/count", (req, res) => {
+    const roomId  = req.params.roomId;
+    const sql = "SELECT count(*) as count, (SELECT capacity FROM rooms WHERE rooms.roomId = ?) as capacity FROM users_in_rooms WHERE users_in_rooms.roomId = ?";
+    db.query(sql, [roomId, roomId], (derr, dres) => {
+        if(derr) {
+          return res.status(500).json({message: derr.message});
+        }
+        console.log(dres);
+        if (dres.length == 0) {
+            return res.status(500).json({message: "Room does not exist"});
+        }
+        res.status(200).json(dres[0]);
+    });
+});
+
+router.get("/:roomId/:userId", (req, res) => {
+    const { userId, roomId } = req.params;
+    const sql = "SELECT * FROM users_in_rooms WHERE roomId = ? AND userId = ?";
+    db.query(sql, [roomId, userId], (derr, dres) => {
+        if(derr) {
+          return res.status(500).json({message: derr.message});
+        }
+        res.status(200).json({user: dres[0]});
+    });
+});
+
+router.post("/disconnect", (req, res) => {
+    const { userId, roomId } = req.body;
+    const sql = "DELETE FROM users_in_rooms WHERE roomId = ? AND userId = ?";
+    db.query(sql, [roomId, userId], (derr, dres) => {
+        if(derr) {
+            return res.status(500).json({message: derr.message});
+        }
+        console.log(dres);
+        if (dres.affectedRows == 0) {
+            return res.status(500).json({message: "Room or user does not exist"});
+        }
+        res.status(200).json({message: "User disconnected..."});
+    });
+});
+
 module.exports = router;
