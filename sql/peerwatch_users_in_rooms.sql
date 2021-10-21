@@ -27,8 +27,8 @@ DROP TABLE IF EXISTS `users_in_rooms`;
 CREATE TABLE `users_in_rooms` (
   `userId` int NOT NULL,
   `roomId` varchar(255) NOT NULL,
-  `chatPermission` tinyint(1) NOT NULL,
-  `urlPermission` tinyint(1) NOT NULL,
+  `chatPermission` tinyint(1) NOT NULL DEFAULT '0',
+  `urlPermission` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`userId`,`roomId`) USING BTREE,
   KEY `fk_users_in_rooms_rooms` (`roomId`) USING BTREE,
   CONSTRAINT `fk_users_in_rooms_rooms` FOREIGN KEY (`roomId`) REFERENCES `rooms` (`roomId`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -54,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-10-20 20:15:31
+-- Dump completed on 2021-10-21 20:58:44
