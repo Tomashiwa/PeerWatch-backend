@@ -13,6 +13,17 @@ const RoomPageWrapper = styled.div`
 	.room-player {
 		height: 80%;
 		width: 72.5%;
+
+		.room-join-fallback {
+			height: 100%;
+			width: 100%;
+
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+
 		.room-res-wrapper {
 			position: relative;
 			padding-top: 56.25%;

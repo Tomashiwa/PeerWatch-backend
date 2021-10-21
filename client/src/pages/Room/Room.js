@@ -8,6 +8,7 @@ import Watchmates from "../../components/Watchmates/Watchmates";
 import RoomPageWrapper from "./Room.styled";
 import { io } from "socket.io-client";
 import URL from "../../util/url";
+import { CircularProgress, Typography } from "@mui/material";
 
 const initialPlayerState = {
 	url: "",
@@ -42,6 +43,7 @@ function Room() {
 	const [user, setUser] = useState(blankUser);
 	const [users, setUsers] = useState([]);
 	const [settings, setSettings] = useState(initialSettings);
+	const [isWaiting, setIsWaiting] = useState(true);
 
 	const [chatSocket, setChatSocket] = useState(null);
 	const [videoSocket, setVideoSocket] = useState(null);
@@ -97,6 +99,14 @@ function Room() {
 	return (
 		<RoomPageWrapper>
 			<div className="room-player">
+				{isWaiting && (
+					<div className="room-join-fallback">
+						<CircularProgress color="warning" />
+						<Typography align="center" variant="h6">
+							Joining...
+						</Typography>
+					</div>
+				)}
 				<div className="room-res-wrapper">
 					<VideoPlayer
 						{...playerState}
@@ -104,6 +114,8 @@ function Room() {
 						user={user}
 						socket={videoSocket}
 						roomId={id}
+						isWaiting={isWaiting}
+						setIsWaiting={setIsWaiting}
 					/>
 				</div>
 			</div>

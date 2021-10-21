@@ -137,6 +137,16 @@ module.exports = (io) => {
 				);
 			} else {
 				const numOfUsers = roomSocketMap.get(roomId).length - 1;
+
+				if (numOfUsers == 0) {
+					console.log(
+						`There are no other users to prepare resume for, bufferer will be release immediately`
+					);
+					bufferReadysMap.delete(socket.id);
+					roomHoldersMap.delete(roomId);
+					videoIO.to(socket.id).emit("RELEASE");
+				}
+
 				console.log(
 					`${socket.id} requests for ${numOfUsers} unique readys at ${newTiming}`
 				);
