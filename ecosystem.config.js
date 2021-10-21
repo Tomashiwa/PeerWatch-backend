@@ -5,7 +5,7 @@ module.exports = {
         script: 'npm run server',
         interpreter: 'none',
         env: {
-          NODE_ENV: 'development',
+          NODE_ENV: 'production',
         },
       },
       {
@@ -13,7 +13,7 @@ module.exports = {
         script: 'npm run client-build',
         interpreter: 'none',
         env: {
-          NODE_ENV: 'development',
+          NODE_ENV: 'production',
         },
       },
     ],
