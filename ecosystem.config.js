@@ -10,7 +10,7 @@ module.exports = {
       },
       {
         name: 'peerwatch-client',
-        script: 'npm run client',
+        script: 'npm run client-build',
         interpreter: 'none',
         env: {
           NODE_ENV: 'development',
