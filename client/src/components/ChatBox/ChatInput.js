@@ -14,6 +14,7 @@ function ChatInput({ onSubmit }) {
 		<form onSubmit={submitMsg}>
 			<ChatInputWrapper>
 				<TextFieldWrapper
+					data-cy="chat-input"
 					className="chatinput-textfield"
 					inputRef={inputRef}
 					placeholder="Chat here..."
