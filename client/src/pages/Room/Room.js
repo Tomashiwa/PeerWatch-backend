@@ -48,8 +48,6 @@ function Room() {
 	const [chatSocket, setChatSocket] = useState(null);
 	const [videoSocket, setVideoSocket] = useState(null);
 
-	// Handles the interaction between different components here
-
 	const linkCallback = (url) => {
 		setPlayerState({ ...playerState, url });
 	};
@@ -61,8 +59,17 @@ function Room() {
 
 	// Initialize sockets
 	useEffect(() => {
-		const newChatSocket = io(URL.LOCAL_SERVER_URL + "/chat");
-		const newVideoSocket = io(URL.LOCAL_SERVER_URL + "/video");
+		const serverUrl =
+			process.env.NODE_ENV && process.env.NODE_ENV === "production"
+				? URL.DEPLOYED_SERVER_URL
+				: URL.LOCAL_SERVER_URL;
+		console.log(
+			`Connecting to ${serverUrl}, current environment: ${
+				process.env.NODE_ENV ? process.env.NODE_ENV : "NONE"
+			}`
+		);
+		const newChatSocket = io(serverUrl + "/chat");
+		const newVideoSocket = io(serverUrl + "/video");
 		setChatSocket(newChatSocket);
 		setVideoSocket(newVideoSocket);
 

@@ -1,4 +1,4 @@
-const ping = require('./routes/api/ping');
+const ping = require("./routes/api/ping");
 const express = require("express");
 const app = express();
 const { instrument } = require("@socket.io/admin-ui");
@@ -12,7 +12,7 @@ app.use(express.json());
 app.get("/api/ping", ping);
 app.use("/api/users", users);
 app.use("/api/rooms", rooms);
-app.use("/api/auth", auth)
+app.use("/api/auth", auth);
 
 const server = app.listen("5000", () => {
 	console.log("Server started on port 5000...");
@@ -20,7 +20,7 @@ const server = app.listen("5000", () => {
 
 const io = new Server(server, {
 	cors: {
-		origin: ["http://localhost:3000", "https://admin.socket.io/"],
+		origin: ["http://localhost:3000", "https://admin.socket.io/", "http://54.179.111.98:3000/"],
 		credentials: false,
 	},
 });
