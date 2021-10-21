@@ -236,7 +236,7 @@ router.post("/register", registerValidation, async (req, res) => {
 		}
 });
 
-router.get("/login", async (req, res) => {
+router.post("/login", async (req, res) => {
 	// depends, but may need to retrieve from db
     // check if email already exists
     const selectUserSQl = "SELECT * FROM users WHERE email = ?";
@@ -284,7 +284,7 @@ router.get("/login", async (req, res) => {
     });
 });
 
-router.get("/authtoken", (req, res) => {
+router.post("/authtoken", (req, res) => {
 	const authHeader = req.headers["authorization"];
 	const token = authHeader && authHeader.split(" ")[1];
 	if (token == null) {
