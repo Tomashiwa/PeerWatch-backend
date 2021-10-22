@@ -8,13 +8,5 @@ module.exports = {
           NODE_ENV: 'production',
         },
       },
-      {
-        name: 'peerwatch-client',
-        script: 'npm run client-build',
-        interpreter: 'none',
-        env: {
-          NODE_ENV: 'production',
-        },
-      },
     ],
   }
