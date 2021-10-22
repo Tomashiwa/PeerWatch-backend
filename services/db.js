@@ -10,6 +10,7 @@ if (env_var.error) {
 // To-do: Use different connections based on node environment
 
 const db = mysql.createConnection({
+	database: "peerwatch",
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     user: process.env.DB_USER,

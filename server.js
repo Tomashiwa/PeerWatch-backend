@@ -1,6 +1,7 @@
 const ping = require("./routes/api/ping");
 const express = require("express");
 const app = express();
+cors = require("cors");
 const { instrument } = require("@socket.io/admin-ui");
 const path = require("path");
 
@@ -10,6 +11,7 @@ const auth = require("./routes/api/auth");
 const { Server } = require("socket.io");
 
 app.use(express.json());
+app.use(cors());
 app.get("/api/ping", ping);
 app.use("/api/users", users);
 app.use("/api/rooms", rooms);

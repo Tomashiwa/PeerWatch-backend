@@ -11,13 +11,15 @@ require("dotenv").config();
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
+// Delete when done integrating recover and reset with DB
 const accounts = [];
 
+// Might wanna store this in db?
 const resets = new Map();
 
 var registerValidation = [
-	check("email", "Email must be of valid email format").isEmail(),
-	check("displayName").isLength({ min: 1 }).withMessage("Display Name must be at least 1 character"),
+	check("email", "Email must be of valid email format.").isEmail(),
+	check("displayName").isLength({ min: 1 }).withMessage("Display Name must be at least 1 character."),
 	check("password").isLength({ min: 8 }).withMessage("Password must be at least 8 characters.").matches("[0-9]").withMessage("Password must contain numbers.").matches("[A-z]").withMessage("Password must contain letters.")
 ];
 
@@ -27,8 +29,9 @@ var resetValidation = [
 ];
 
 router.post("/recover", async (req, res) => {
+	// find account with email
 	const account = accounts.find(account => account.email === req.body.email);
-	if (account == null) {
+	if (account === null) {
 		// email not found.
 		console.log("email not found");
 		
@@ -38,15 +41,18 @@ router.post("/recover", async (req, res) => {
 	}
 	
 	const email = account.email;
-	// map some random id to email
+	// map some random id to email to keep track
 	const randomID = crypto.randomBytes(16).toString('hex');
 	resets.set(randomID, email);
 	console.log(`random ID mapped to email: ${randomID}`);
 	
+	// use hashed password as secret.
 	const password = account.password;
+	// get some token that will expire in 15 mins. To expire the link that is sent to user.
 	const resetToken = jwt.sign({email: email}, password, { expiresIn: '15m' });
 	console.log(`signed reset token: ${resetToken}`);
 	
+	// Need change the link later.
 	const link = "http://localhost:3000/resetapi/" + randomID + "/" + resetToken;
 	console.log(`link: ${link}`);
 	
@@ -99,7 +105,7 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 		try {
 			// change the errors when want to test what went wrong
 			const randomID = req.params._id;
-			if (randomID == null) {
+			if (randomID === null) {
 				// no random id
 				console.log("randomID not given");
 				
@@ -108,8 +114,9 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 				});
 			}
 			
+			// get email from mapped random ID
 			var email = resets.get(randomID);
-			if (typeof email == undefined) {
+			if (typeof email === undefined) {
 				// somehow email not mapped or invalid
 				console.log("email somehow not mapped");
 				
@@ -120,7 +127,7 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 			
 			const authHeader = req.headers["authorization"];
 			const resetToken = authHeader && authHeader.split(" ")[1];
-			if (resetToken == null) {
+			if (resetToken === null) {
 				// no token
 				console.log("resetToken not given")
 				
@@ -130,6 +137,7 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 			}
 			
 			// get password from accounts list
+			// Use email to find account's old password from DB to verify jwt token
 			let oldPassword = null;
 			let idx = -1;
 			for (let i = 0; i < accounts.length; i++) {
@@ -139,7 +147,7 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 				}
 			}
 			
-			if (oldPassword == null) {
+			if (oldPassword === null) {
 				console.log("Account somehow not found");
 				
 				return res.status(401).json({
@@ -166,10 +174,10 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 			}
 			
 			const newPassword = await bcrypt.hash(req.body.password, 10);
-			// set new password
+			// set new password for account with the email
 			accounts[idx].password = newPassword;
 			
-			// delete map since able to reset
+			// delete mapping since able to reset
 			resets.delete(randomID);
 			
 			console.log("Password resetted");
@@ -178,7 +186,7 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 			});
 		} catch(err) {
 			console.log("something went wrong in reset");
-			
+			console.log(err.message);
 			return res.status(500).send(err.message);
 		}
 });
@@ -232,12 +240,12 @@ router.post("/register", registerValidation, async (req, res) => {
 
 		} catch(err) {
 			console.log("something went wrong in register");
+			console.log(err.message);
 			return res.status(500).send(err.message);
 		}
 });
 
 router.post("/login", async (req, res) => {
-	// depends, but may need to retrieve from db
     // check if email already exists
     const selectUserSQl = "SELECT * FROM users WHERE email = ?";
     const email = req.body.email;
@@ -245,7 +253,7 @@ router.post("/login", async (req, res) => {
         if (selectUserRes == null || selectUserRes.length == 0) {
             console.log("email not found");
             return res.status(401).json({
-                message: "Account not registered."
+                message: "Account not registered. Please enter the correct email/password."
             })
         }
         try {
@@ -273,12 +281,13 @@ router.post("/login", async (req, res) => {
 
                     // password does not match.
                     return res.status(401).json({
-                        message: "Wrong password."
+                        message: "Account not registered. Please enter the correct email/password."
                     });
                 }
             });
         } catch(err) {
             console.log("something went wrong in login");
+			console.log(err.message);
             return res.status(500).send(err.message);
         }
     });
@@ -306,7 +315,11 @@ router.post("/authtoken", (req, res) => {
 		
 		console.log("account authenticated");
 		return res.status(200).json({
-			message: "Account authenticated."
+			message: "Account authenticated.",
+			userId: account.userId,
+			displayName: account.displayName,
+			token: token,
+			email: account.email
 		});
 	});
 });
