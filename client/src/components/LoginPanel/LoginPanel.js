@@ -17,15 +17,13 @@ function LoginPanel({ successCallback, toRegisterCallback }) {
 	const { setUserInfo } = useUser();
 	
 	const login = () => {
-		console.log(
-			`login with email: ${emailRef.current.value}, password: ${passRef.current.value}`
-		);
+		//console.log(`login with email: ${emailRef.current.value}, password: ${passRef.current.value}`);
 		
 		setGeneralFlag(false);
 		
 		axios.post(loginAPI, {email: emailRef.current.value, password: passRef.current.value})
 			.then((res) => {
-				console.log("logged in");
+				//console.log("logged in");
 				
 				// Add to context
 				const newUserInfo = {
@@ -35,7 +33,7 @@ function LoginPanel({ successCallback, toRegisterCallback }) {
 					token: res.data.token
 				}
 				setUserInfo(newUserInfo);
-				console.log("added user to context");
+				//console.log("added user to context");
 				
 				// Add token to browser
 				localStorage.setItem("token", res.data.token);
@@ -60,7 +58,6 @@ function LoginPanel({ successCallback, toRegisterCallback }) {
 				inputRef={emailRef}
 				variant="filled"
 				label="Email address"
-				helperText="Enter your email address"
 			/>
 			<TextFieldWrapper
 				required
@@ -68,7 +65,6 @@ function LoginPanel({ successCallback, toRegisterCallback }) {
 				variant="filled"
 				label="Password"
 				type="password"
-				helperText="Enter your password"
 			/>
 			<ButtonContainerWrapper>
 				<ButtonWrapper onClick={login}>Login</ButtonWrapper>

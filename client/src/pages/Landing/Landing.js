@@ -26,7 +26,7 @@ function Landing() {
 		
 		// Remove user info from context
 		setUserInfo(null);
-		console.log("user removed from context");
+		//console.log("user removed from context");
 	};
 
 	const toRegister = () => {
@@ -57,7 +57,7 @@ function Landing() {
 						token: res.data.token
 					}
 					setUserInfo(newUserInfo);
-					console.log("added user to context");
+					//console.log("added user to context");
 					
 					// Show create/join room.
 					setIsLoggedIn(true);

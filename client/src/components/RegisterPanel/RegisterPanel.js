@@ -35,16 +35,14 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 	}
 
 	const register = () => {
-		console.log(
-			`Register with name: ${nameRef.current.value}, email: ${emailRef.current.value}, password: ${passRef.current.value}, passwordAgain: ${passAgainRef.current.value}`
-		);
+		//console.log(`Register with name: ${nameRef.current.value}, email: ${emailRef.current.value}, password: ${passRef.current.value}, passwordAgain: ${passAgainRef.current.value}`);
 		
 		resetErrors();
 		
 		if (passRef.current.value === passAgainRef.current.value) {
 			axios.post(registerAPI, {displayName: nameRef.current.value, email: emailRef.current.value, password: passRef.current.value})
 				.then((res) => {
-					console.log("registered");
+					//console.log("registered");
 					
 					// Add to context
 					const newUserInfo = {
@@ -54,7 +52,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 						token: res.data.token
 					}
 					setUserInfo(newUserInfo);
-					console.log("added user to context");
+					//console.log("added user to context");
 					
 					// Add token to browser
 					localStorage.setItem("token", res.data.token);
@@ -64,7 +62,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					if (err.response) {
 						if (err.response.status === credentialsErrCode) {
 							const errData = err.response.data.errors;
-							console.log(errData);
+							//console.log(errData);
 							let passErrMsgSet = false;
 							for (let i = 0; i < errData.length; i++) {
 								if (errData[i].param === "displayName") {
@@ -89,7 +87,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					}
 				})
 		} else {
-			console.log("password not the same");
+			//console.log("password not the same");
 			setPasswordAgainFlag(true);
 		}
 	};
