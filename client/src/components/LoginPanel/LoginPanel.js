@@ -58,7 +58,6 @@ function LoginPanel({ successCallback, toRegisterCallback }) {
 				inputRef={emailRef}
 				variant="filled"
 				label="Email address"
-				helperText="Enter your email address"
 			/>
 			<TextFieldWrapper
 				required
@@ -66,7 +65,6 @@ function LoginPanel({ successCallback, toRegisterCallback }) {
 				variant="filled"
 				label="Password"
 				type="password"
-				helperText="Enter your password"
 			/>
 			<ButtonContainerWrapper>
 				<ButtonWrapper onClick={login}>Login</ButtonWrapper>
