@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import ChatboxWrapper from "./Chatbox.styled";
 import ChatContent from "./ChatContent";
 import ChatInput from "./ChatInput";
-import { useUser } from "../Context/UserContext";
+import UserContext from "../Context/UserContext";
 
 function Chatbox({ socket, roomId }) {
 	const [messages, setMessages] = useState([]);
-	const { userInfo } = useUser();
+	const { userInfo } = useContext(UserContext);
 
 	const receiveMessage = useCallback(
 		(msg) => {
