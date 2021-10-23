@@ -1,5 +1,5 @@
 import { Typography } from "@mui/material";
-import React, { useRef, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
 import axios from "axios";
 import Panel from "../Panel/Panel";
 import {
@@ -9,19 +9,14 @@ import {
 	RecoveryButtonWrapper,
 	TextFieldWrapper,
 } from "./LoginPanel.styled";
-import { useUser } from "../Context/UserContext";
-
-const loginAPI =
-	process.env.NODE_ENV && process.env.NODE_ENV === "production"
-		? "http://54.179.111.98:5000/api/auth/login"
-		: "http://localhost:5000/api/auth/login";
+import UserContext from "../Context/UserContext";
 
 function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback }) {
 	const emailRef = useRef(null);
 	const passRef = useRef(null);
 	const [generalFlag, setGeneralFlag] = useState(false);
 	const [generalMsg, setGeneralMsg] = useState("");
-	const { setUserInfo } = useUser();
+	const { setUserInfo } = useContext(UserContext);
 
 	const login = (e) => {
 		e.preventDefault();
@@ -29,7 +24,7 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 		setGeneralFlag(false);
 
 		axios
-			.post(loginAPI, { email: emailRef.current.value, password: passRef.current.value })
+			.post("/api/auth/login", { email: emailRef.current.value, password: passRef.current.value })
 			.then((res) => {
 				// Add to context
 				const newUserInfo = {
@@ -37,6 +32,7 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 					displayName: res.data.displayName,
 					email: res.data.email,
 					token: res.data.token,
+					isLoaded: true,
 				};
 				setUserInfo(newUserInfo);
 

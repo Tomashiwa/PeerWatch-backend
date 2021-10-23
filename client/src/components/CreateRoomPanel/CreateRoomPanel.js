@@ -1,14 +1,14 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useHistory } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { Typography } from "@mui/material";
 import { ButtonWrapper } from "./CreateRoomPanel.styled";
 import axios from "axios";
 import Panel from "../Panel/Panel";
-import { useUser } from "../Context/UserContext";
+import UserContext from "../Context/UserContext";
 
 function CreateRoomPanel() {
-	const { userInfo } = useUser();
+	const { userInfo } = useContext(UserContext);
 	const history = useHistory();
 
 	const create = () => {

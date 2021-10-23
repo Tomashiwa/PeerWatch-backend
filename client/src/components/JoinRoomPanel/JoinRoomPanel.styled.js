@@ -4,10 +4,10 @@ import { theme } from "../../styles/theme";
 
 export const TextFieldWrapper = mStyled(TextField)({
 	width: "100%",
-	background: theme.white,
-	borderRadius: "5px",
 	".MuiInputBase-root": {
-		color: `${theme.orange}`,
+		background: theme.white,
+		borderRadius: "5px",
+		color: `${theme.darkGray}`,
 	},
 });
 

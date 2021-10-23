@@ -1,29 +1,50 @@
 import { Typography } from "@mui/material";
-import React, { useRef } from "react";
+import React, { useContext, useRef, useState } from "react";
 import { useHistory } from "react-router";
 import Panel from "../Panel/Panel";
 import { ButtonWrapper, TextFieldWrapper } from "./JoinRoomPanel.styled";
 import { validate as uuidValidate } from "uuid";
+import UserContext from "../Context/UserContext";
 import axios from "axios";
+
+const ERROR_MSG_INVALID_FORMAT = "Invalid room ID format";
+const ERROR_MSG_FULL_ROOM = "The room is full. Please try again later.";
+const ERROR_MSG_ALREADY_IN = "You're already in the room!";
 
 function JoinRoomPanel() {
 	const inputRef = useRef(null);
 	const history = useHistory();
+	const { userInfo } = useContext(UserContext);
+	const [hasError, setHasError] = useState(false);
+	const [errorMsg, setErrorMsg] = useState("");
 
 	const join = async () => {
 		const id = inputRef.current.value;
 		if (!uuidValidate(id)) {
+			setHasError(true);
+			setErrorMsg(ERROR_MSG_INVALID_FORMAT);
 			console.log(`Invalid room id format... (Given id: ${id})`);
 		} else {
 			// Reject if the room is not full and the user is not already in
-			axios
-				.get(`/api/rooms/${id}/count`)
+			const getUsers = axios.get(`/api/rooms/${id}/users`);
+			const getCapacityCount = axios.get(`/api/rooms/${id}/count`);
+
+			Promise.all([getUsers, getCapacityCount])
 				.then((res) => {
-					const { capacity, count } = res.data;
-					if (count >= capacity) {
-						// To-do: Display an error text under the textfield
+					const userIds = res[0].data.map((entry) => entry.userId);
+					const { capacity, count } = res[1].data;
+
+					if (userIds.includes(userInfo.userId)) {
+						setHasError(true);
+						setErrorMsg(ERROR_MSG_ALREADY_IN);
+						console.log(`You are already in that room!`);
+					} else if (count >= capacity) {
+						setHasError(true);
+						setErrorMsg(ERROR_MSG_FULL_ROOM);
 						console.log(`Room ${id} is already full (${count} / ${capacity})`);
 					} else {
+						setHasError(false);
+						setErrorMsg("");
 						history.push(`/room/${id}`);
 					}
 				})
@@ -36,7 +57,12 @@ function JoinRoomPanel() {
 	return (
 		<Panel>
 			<Typography variant="h5">Jump in with your friends!</Typography>
-			<TextFieldWrapper placeholder="Enter room code here..." inputRef={inputRef} />
+			<TextFieldWrapper
+				placeholder="Enter room code here..."
+				inputRef={inputRef}
+				error={hasError}
+				helperText={hasError ? errorMsg : ""}
+			/>
 			<ButtonWrapper variant="contained" onClick={join}>
 				Join
 			</ButtonWrapper>

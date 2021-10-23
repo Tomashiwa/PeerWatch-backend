@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
 import axios from "axios";
 import Panel from "../Panel/Panel";
 import {
@@ -7,15 +7,11 @@ import {
 	FormWrapper,
 	TextFieldWrapper,
 } from "./RegisterPanel.styled";
-import { useUser } from "../Context/UserContext";
+import UserContext from "../Context/UserContext";
 
-const credentialsErrCode = 422;
-const emailExistsErrCode = 409;
-const passwordAgainError = "Please enter the same password.";
-const registerAPI =
-	process.env.NODE_ENV && process.env.NODE_ENV === "production"
-		? "http://54.179.111.98:5000/api/auth/register"
-		: "http://localhost:5000/api/auth/register";
+const CREDENTIALS_ERROR_CODE = 422;
+const EMAIL_EXISTS_ERROR_CODE = 409;
+const PASSWORD_AGAIN_ERROR_MSG = "Please enter the same password.";
 
 function RegisterPanel({ successCallback, cancelCallback }) {
 	const nameRef = useRef(null);
@@ -30,7 +26,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 	const [passwordFlag, setPasswordFlag] = useState(false);
 	const [passwordError, setPasswordError] = useState("");
 	const [passwordAgainFlag, setPasswordAgainFlag] = useState(false);
-	const { setUserInfo } = useUser();
+	const { setUserInfo } = useContext(UserContext);
 
 	const resetErrors = () => {
 		setGeneralFlag(false);
@@ -47,7 +43,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 
 		if (passRef.current.value === passAgainRef.current.value) {
 			axios
-				.post(registerAPI, {
+				.post("/api/auth/register", {
 					displayName: nameRef.current.value,
 					email: emailRef.current.value,
 					password: passRef.current.value,
@@ -61,6 +57,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 						displayName: res.data.displayName,
 						email: res.data.email,
 						token: res.data.token,
+						isLoaded: true,
 					};
 					setUserInfo(newUserInfo);
 					//console.log("added user to context");
@@ -73,7 +70,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 				})
 				.catch((err) => {
 					if (err.response) {
-						if (err.response.status === credentialsErrCode) {
+						if (err.response.status === CREDENTIALS_ERROR_CODE) {
 							const errData = err.response.data.errors;
 							//console.log(errData);
 							let passErrMsgSet = false;
@@ -91,7 +88,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 									setPasswordError(errData[i].msg);
 								}
 							}
-						} else if (err.response.status === emailExistsErrCode) {
+						} else if (err.response.status === EMAIL_EXISTS_ERROR_CODE) {
 							setEmailFlag(true);
 							setEmailError(err.response.data.message);
 						} else {
@@ -146,7 +143,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					variant="filled"
 					label="Re-enter password"
 					type="password"
-					helperText={passwordAgainFlag ? passwordAgainError : ""}
+					helperText={passwordAgainFlag ? PASSWORD_AGAIN_ERROR_MSG : ""}
 				/>
 				<ButtonContainerWrapper>
 					<ButtonWrapper type="submit">Register</ButtonWrapper>
