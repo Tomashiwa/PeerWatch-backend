@@ -1,21 +1,11 @@
+import axios from "axios";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player/youtube";
 
-const placeholderRoomInfo = {
-	id: 1,
-	hostId: 1,
-	capacity: 15,
-	url: "",
-	elapsedTime: 0,
-};
-const fallbackURL = "https://www.youtube.com/watch?v=Ski_KEgOUP4";
 const UNAVALIABLE = -1;
 const THRESHOLD_SYNC = 1;
 const DELAY_DEBOUNCED_PLAYING = 250;
 
-const timeout = (ms) => {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-};
 const debounce = (func, duration) => {
 	let timeout;
 	return (...args) => {
@@ -52,10 +42,17 @@ const throttleSetState = (setState, delay) => {
 	return throttledSetState;
 };
 
-function VideoPlayer({ socket, roomId, users, user, url, isWaiting, setIsWaiting }) {
-	const [videoUrl, setVideoUrl] = useState("");
+function VideoPlayer({
+	socket,
+	roomId,
+	users,
+	user,
+	isWaiting,
+	setIsWaiting,
+	roomInfo,
+	setRoomInfo,
+}) {
 	const [isPlaying, setIsPlaying] = useState(true);
-
 	const [buffererId, setBuffererId] = useState(UNAVALIABLE);
 	const [isInitialSync, setIsInitialSync] = useState(true);
 	const [playbackRate, setPlaybackRate] = useState(1);
@@ -83,22 +80,9 @@ function VideoPlayer({ socket, roomId, users, user, url, isWaiting, setIsWaiting
 	);
 
 	// Initialize player with an URL
-	const initialize = useCallback(async () => {
-		socket.emit("join-room", roomId, async () => {
+	const initialize = useCallback(() => {
+		socket.emit("join-room", roomId, () => {
 			console.log(`${socket.id} has joined the video room`);
-
-			// To-do: Fetch room info from DB
-			const [roomInfo] = await Promise.all([placeholderRoomInfo, timeout(1000)]);
-
-			if (roomInfo.url.length > 0) {
-				setVideoUrl(roomInfo.url);
-				console.log(`${socket.id} found URL for the room ${roomId}, loading it to player`);
-			} else {
-				setVideoUrl(fallbackURL);
-				console.log(
-					`${socket.id} cannot found URL for the room ${roomId}, using fallback...`
-				);
-			}
 		});
 	}, [socket, roomId]);
 
@@ -123,24 +107,25 @@ function VideoPlayer({ socket, roomId, users, user, url, isWaiting, setIsWaiting
 	const receiveUrl = useCallback(
 		(url) => {
 			setIsInitialSync(true);
-			setVideoUrl(url);
+			setRoomInfo((prevInfo) => {
+				return { ...prevInfo, url };
+			});
 		},
-		[setVideoUrl]
+		[setRoomInfo]
 	);
 	useEffect(() => {
-		if (socket && url) {
-			// Self: Update state
-			setIsInitialSync(true);
-			setVideoUrl(url);
-
-			// Self: Broadcast new URL to all
-			if (url !== fallbackURL) {
-				socket.emit("SEND_URL", roomId, url);
-			}
-
-			// Self: To-do - Update DB's URL
+		if (socket && roomInfo.url) {
+			axios
+				.put("/api/rooms/url", { roomId, url: roomInfo.url })
+				.then((res) => {
+					setIsInitialSync(true);
+					socket.emit("SEND_URL", roomId, roomInfo.url);
+				})
+				.catch((err) => {
+					console.log(err);
+				});
 		}
-	}, [socket, roomId, url]);
+	}, [socket, roomId, roomInfo.url, setRoomInfo]);
 
 	// Synchronize user's timing
 	const receiveTiming = useCallback(
@@ -367,7 +352,7 @@ function VideoPlayer({ socket, roomId, users, user, url, isWaiting, setIsWaiting
 			ref={playerRef}
 			width="100%"
 			height="100%"
-			url={videoUrl}
+			url={roomInfo.url}
 			playing={isPlaying}
 			playbackRate={playbackRate}
 			controls

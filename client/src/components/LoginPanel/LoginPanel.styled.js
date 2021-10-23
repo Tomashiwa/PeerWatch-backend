@@ -3,6 +3,16 @@ import { TextField, Button } from "@mui/material";
 import { theme } from "../../styles/theme";
 import styled from "styled-components";
 
+export const FormWrapper = styled.form`
+	width: 100%;
+
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-row-gap: 1em;
+	align-items: center;
+	justify-items: center;
+`;
+
 export const TextFieldWrapper = mStyled(TextField)({
 	width: "80%",
 	".MuiFilledInput-input, .MuiFilledInput-input:hover": {
@@ -36,4 +46,8 @@ export const ButtonWrapper = mStyled(Button)({
 	":hover": {
 		background: theme.darkOrange,
 	},
+});
+
+export const RecoveryButtonWrapper = mStyled(Button)({
+	color: theme.orange,
 });

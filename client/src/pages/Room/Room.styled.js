@@ -34,7 +34,6 @@ const RoomPageWrapper = styled.div`
 			}
 		}
 	}
-	// To-do: Fix chatbox overflowing the flex container
 	.room-sidebar {
 		height: 80%;
 		width: 22.5%;

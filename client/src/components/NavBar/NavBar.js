@@ -8,7 +8,6 @@ function NavBar() {
 		<NavBarWrapper>
 			<Typography variant="h4">PeerWatch</Typography>
 			<Link to="/">Home</Link>
-			<Link to="/room/123">Room</Link>
 		</NavBarWrapper>
 	);
 }
