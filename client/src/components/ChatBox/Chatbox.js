@@ -26,7 +26,7 @@ function Chatbox({ socket, roomId }) {
 			receiveMessage(taggedMsg);
 			socket.emit("send-message", taggedMsg, roomId);
 		},
-		[receiveMessage, socket, roomId]
+		[receiveMessage, socket, roomId, userInfo.displayName]
 	);
 
 	const initialize = useCallback(() => {
@@ -35,7 +35,7 @@ function Chatbox({ socket, roomId }) {
 			receiveMessage(msg);
 			socket.emit("send-message", msg, roomId);
 		});
-	}, [receiveMessage, socket, roomId]);
+	}, [receiveMessage, socket, roomId, userInfo.displayName]);
 
 	// Reset socket event handlers when Chatbox re-render
 	useEffect(() => {

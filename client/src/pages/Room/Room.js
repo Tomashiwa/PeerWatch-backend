@@ -37,7 +37,9 @@ function Room() {
 	const { id } = useParams();
 	const [user, setUser] = useState(blankUser);
 	const [users, setUsers] = useState([]);
-	const [settings, setSettings] = useState(initialSettings);
+	const [settings] = useState(initialSettings);
+	// temp commented out to remove warnings. Remove above when setSettings is used.
+	//const [settings, setSettings] = useState(initialSettings);
 	const [isWaiting, setIsWaiting] = useState(true);
 	const [chatSocket, setChatSocket] = useState(null);
 	const [videoSocket, setVideoSocket] = useState(null);
@@ -46,9 +48,12 @@ function Room() {
 
 	const { userInfo } = useContext(UserContext);
 
+	// temp commented out to remove warnings
+	/*
 	const linkCallback = (url) => {
 		setRoomInfo({ ...roomInfo, url });
 	};
+	*/
 
 	const saveCallback = () => {
 		console.log("SETTINGS SAVED");

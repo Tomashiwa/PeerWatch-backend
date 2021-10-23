@@ -17,6 +17,9 @@ const debounce = (func, duration) => {
 		timeout = setTimeout(later, duration);
 	};
 };
+
+// temp commented out to remove warnings
+/*
 const throttleSetState = (setState, delay) => {
 	let throttleTimeout = null;
 	let storedState = null;
@@ -41,6 +44,7 @@ const throttleSetState = (setState, delay) => {
 
 	return throttledSetState;
 };
+*/
 
 function VideoPlayer({
 	socket,
