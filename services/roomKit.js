@@ -53,7 +53,6 @@ module.exports = (io) => {
 		socket.on("disconnect", function () {
 			if (socketRoomMap.has(socket.id) && roomSocketMap.has(socketRoomMap.get(socket.id))) {
 				const roomId = socketRoomMap.get(socket.id);
-				socket.to(roomId).emit("receive-message", `${socket.id} has left the chat`);
 
 				let userList = roomSocketMap.get(roomId);
 				// might have better way. Find or idk man.
