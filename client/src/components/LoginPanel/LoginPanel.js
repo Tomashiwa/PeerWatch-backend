@@ -24,7 +24,10 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 		setGeneralFlag(false);
 
 		axios
-			.post("/api/auth/login", { email: emailRef.current.value, password: passRef.current.value })
+			.post("/api/auth/login", {
+				email: emailRef.current.value,
+				password: passRef.current.value,
+			})
 			.then((res) => {
 				// Add to context
 				const newUserInfo = {
@@ -36,13 +39,9 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 				};
 				setUserInfo(newUserInfo);
 
-				console.log(res.data);
-				console.log(newUserInfo);
-
 				// Add token to browser
-				console.log(`[Login] Set token: ${res.data.token}`);
-
 				localStorage.setItem("token", res.data.token);
+
 				successCallback();
 			})
 			.catch((err) => {

@@ -44,16 +44,13 @@ function Room() {
 	const [chatSocket, setChatSocket] = useState(null);
 	const [videoSocket, setVideoSocket] = useState(null);
 	const [roomInfo, setRoomInfo] = useState({});
-	const history = useHistory();
 
+	const history = useHistory();
 	const { userInfo } = useContext(UserContext);
 
-	// temp commented out to remove warnings
-	/*
 	const linkCallback = (url) => {
 		setRoomInfo({ ...roomInfo, url });
 	};
-	*/
 
 	const saveCallback = () => {
 		console.log("SETTINGS SAVED");
@@ -62,8 +59,6 @@ function Room() {
 
 	// Join room, retrieve room's info and connect to its sockets
 	useEffect(() => {
-		console.log(userInfo);
-
 		let newChatSocket = null;
 		let newVideoSocket = null;
 		const serverUrl =
@@ -79,25 +74,16 @@ function Room() {
 				const userIds = res[0].data.map((entry) => entry.userId);
 				const { capacity, count } = res[1].data;
 
-				// MODIFY ROUTER TO REDIRECT/DEFAULT TO THE "/" PAGE IF NOT AUTHENTICATED
-
 				if (userIds.includes(userInfo.userId)) {
-					// setHasError(true);
-					// setErrorMsg(ERROR_MSG_ALREADY_IN);
-					console.log(`You are already in that room!`);
-				} else if (count >= capacity) {
-					// setHasError(true);
-					// setErrorMsg(ERROR_MSG_FULL_ROOM);
-					console.log(`Room ${id} is already full (${count} / ${capacity})`);
+					history.push(`/room/${id}/alreadyin`);
+				} else if (count && capacity && count >= capacity) {
+					history.push(`/room/${id}/full`);
 				} else {
-					// setHasError(false);
-					// setErrorMsg("");
 					axios
 						.post("/api/rooms/join", { userId: userInfo.userId, roomId: id })
 						.then((res) => {
 							// Retrieve room info
 							axios.get(`/api/rooms/${id}`).then((roomRes) => {
-								console.log("Retrieved room data");
 								let newRoomInfo = roomRes.data.room;
 								if (!newRoomInfo.url || newRoomInfo.url.length === 0) {
 									newRoomInfo.url = URL.FALLBACK_VIDEO;
@@ -114,11 +100,13 @@ function Room() {
 							setVideoSocket(newVideoSocket);
 						})
 						.catch((err) => {
+							history.push("/room_notfound");
 							console.log(err);
 						});
 				}
 			})
 			.catch((err) => {
+				history.push("/room_notfound");
 				console.log(err);
 			});
 
@@ -185,11 +173,7 @@ function Room() {
 				</div>
 			</div>
 			<div className="room-sidebar">
-				<VideoLinker
-					linkCallback={() => {
-						console.log(userInfo);
-					}}
-				/>
+				<VideoLinker linkCallback={linkCallback} />
 				<Watchmates users={users} />
 				<Chatbox socket={chatSocket} roomId={id} />
 				<RoomSettings

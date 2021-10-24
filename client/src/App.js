@@ -9,6 +9,12 @@ import Landing from "./pages/Landing/Landing";
 import Room from "./pages/Room/Room";
 import NavBar from "./components/NavBar/NavBar";
 import AppWrapper from "./App.styled";
+import PleaseLogin from "./pages/PleaseLogin/PleaseLogin";
+import Loading from "./pages/Loading/Loading";
+import RoomAlreadyIn from "./pages/Room/RoomAlreadyIn";
+import RoomFull from "./pages/Room/RoomFull";
+import RoomNotFound from "./pages/Room/RoomNotFound";
+import NotFound from "./pages/NotFound/NotFound";
 
 function App() {
 	const [userInfo, setUserInfo] = useState({
@@ -44,10 +50,9 @@ function App() {
 					userId: undefined,
 					displayName: undefined,
 					email: undefined,
-					token: userToken,
-					isLoaded: false,
+					token: undefined,
+					isLoaded: true,
 				});
-				console.log(err);
 			});
 	}, []);
 
@@ -61,17 +66,30 @@ function App() {
 						</div>
 						<div className="app-content">
 							<Switch>
-								<Route path="/room/:id">
-									{userInfo &&
-									userInfo.isLoaded &&
-									userInfo.token !== undefined ? (
-										<Room />
-									) : (
-										<div>Not authenticated</div>
-									)}
+								<Route path="/room/:id/alreadyin">
+									<RoomAlreadyIn />
 								</Route>
-								<Route path="/">
+								<Route path="/room/:id/full">
+									<RoomFull />
+								</Route>
+								<Route path="/room/:id">
+									{(!userInfo ||
+										(userInfo &&
+											userInfo.isLoaded &&
+											userInfo.token === undefined)) && <PleaseLogin />}
+									{userInfo &&
+										userInfo.isLoaded &&
+										userInfo.token !== undefined && <Room />}
+									{userInfo && !userInfo.isLoaded && <Loading />}
+								</Route>
+								<Route exact path="/room_notfound">
+									<RoomNotFound />
+								</Route>
+								<Route exact path="/">
 									<Landing />
+								</Route>
+								<Route path="*">
+									<NotFound />
 								</Route>
 							</Switch>
 						</div>
