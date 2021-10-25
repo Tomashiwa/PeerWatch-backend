@@ -3,13 +3,6 @@ import { styled as mStyled } from "@mui/material/styles";
 import { Modal, Button } from "@mui/material";
 import { theme } from "../../styles/theme";
 
-export const RoomSettingsWrapper = styled.div`
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: flex-end;
-`;
-
 export const ModalWrapper = mStyled(Modal)`
     position: fixed;
     z-index: 1300;
@@ -86,5 +79,4 @@ export const ButtonWrapper = mStyled(Button)({
 	":hover": {
 		background: theme.darkOrange,
 	},
-	marginLeft: "15px",
 });

@@ -1,6 +1,9 @@
 import styled from "styled-components";
+import { styled as mStyled } from "@mui/material/styles";
+import { Button } from "@mui/material";
+import { theme } from "../../styles/theme";
 
-const NavBarWrapper = styled.nav`
+export const NavBarWrapper = styled.nav`
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -16,4 +19,9 @@ const NavBarWrapper = styled.nav`
 	}
 `;
 
-export default NavBarWrapper;
+export const ButtonWrapper = mStyled(Button)({
+	color: theme.orange,
+	":hover": {
+		color: theme.darkOrange,
+	},
+});

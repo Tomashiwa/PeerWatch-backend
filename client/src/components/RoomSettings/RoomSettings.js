@@ -1,11 +1,6 @@
 import React, { useState } from "react";
 import { TextField, Typography } from "@mui/material";
-import {
-	RoomSettingsWrapper,
-	ButtonWrapper,
-	ContentWrapper,
-	ModalWrapper,
-} from "./RoomSettings.styled";
+import { ButtonWrapper, ContentWrapper, ModalWrapper } from "./RoomSettings.styled";
 import RoomTable from "./RoomTable";
 
 function RoomSettings({ capacity, users, saveCallback }) {
@@ -24,9 +19,9 @@ function RoomSettings({ capacity, users, saveCallback }) {
 	};
 
 	return (
-		<RoomSettingsWrapper>
+		<>
 			<ButtonWrapper variant="contained" onClick={openModel}>
-				Room settings
+				Settings
 			</ButtonWrapper>
 			<ModalWrapper open={open} onClose={closeModal}>
 				<ContentWrapper>
@@ -52,7 +47,7 @@ function RoomSettings({ capacity, users, saveCallback }) {
 					</div>
 				</ContentWrapper>
 			</ModalWrapper>
-		</RoomSettingsWrapper>
+		</>
 	);
 }
 

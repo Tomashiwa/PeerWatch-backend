@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useParams } from "react-router";
 import Chatbox from "../../components/ChatBox/Chatbox";
-import RoomSettings from "../../components/RoomSettings/RoomSettings";
 import VideoLinker from "../../components/VideoLinker/VideoLinker";
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import Watchmates from "../../components/Watchmates/Watchmates";
@@ -12,6 +11,7 @@ import { CircularProgress, Typography } from "@mui/material";
 import axios from "axios";
 import UserContext from "../../components/Context/UserContext";
 import { useHistory } from "react-router";
+import RoomDrawer from "../../components/RoomDrawer/RoomDrawer";
 
 const initialSettings = {
 	capacity: 15,
@@ -176,11 +176,7 @@ function Room() {
 				<VideoLinker linkCallback={linkCallback} />
 				<Watchmates users={users} />
 				<Chatbox socket={chatSocket} roomId={id} />
-				<RoomSettings
-					capacity={settings.capacity}
-					users={settings.users}
-					saveCallback={saveCallback}
-				/>
+				<RoomDrawer roomId={id} settings={settings} saveCallback={saveCallback} />
 			</div>
 		</RoomPageWrapper>
 	);
