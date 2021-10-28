@@ -31,7 +31,7 @@ function RoomSettings({ capacity, users, saveCallback }) {
 						<TextField
 							className="capacity-input"
 							type="number"
-							placeholder={capacity}
+							placeholder="capacity"
 						/>
 					</div>
 					<div className="settings-table">
