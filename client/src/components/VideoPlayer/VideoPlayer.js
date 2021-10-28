@@ -55,6 +55,7 @@ function VideoPlayer({
 	setIsWaiting,
 	roomInfo,
 	setRoomInfo,
+	finishCallback,
 }) {
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [buffererId, setBuffererId] = useState(UNAVALIABLE);
@@ -382,6 +383,7 @@ function VideoPlayer({
 			onReady={readyCallback}
 			onBuffer={bufferStartCallback}
 			onBufferEnd={bufferEndCallback}
+			onEnded={finishCallback}
 			style={{
 				pointerEvents: buffererId === UNAVALIABLE ? "auto" : "none",
 				filter: buffererId === UNAVALIABLE ? "" : "blur(5px)",

@@ -12,6 +12,7 @@ import axios from "axios";
 import UserContext from "../../components/Context/UserContext";
 import { useHistory } from "react-router";
 import RoomDrawer from "../../components/RoomDrawer/RoomDrawer";
+import TimeoutModal from "../../components/TimeoutModal/TimeoutModal";
 
 const initialSettings = {
 	capacity: 15,
@@ -44,6 +45,7 @@ function Room() {
 	const [chatSocket, setChatSocket] = useState(null);
 	const [videoSocket, setVideoSocket] = useState(null);
 	const [roomInfo, setRoomInfo] = useState({});
+	const [isTimeoutPromptOpen, setIsTimeoutPromptOpen] = useState(false);
 
 	const history = useHistory();
 	const { userInfo } = useContext(UserContext);
@@ -55,6 +57,14 @@ function Room() {
 	const saveCallback = () => {
 		console.log("SETTINGS SAVED");
 		// Broadcast settings to all other users;
+	};
+
+	const openTimout = () => {
+		setIsTimeoutPromptOpen(true);
+	};
+
+	const closeTimeout = () => {
+		setIsTimeoutPromptOpen(false);
 	};
 
 	// Join room, retrieve room's info and connect to its sockets
@@ -169,6 +179,7 @@ function Room() {
 						setIsWaiting={setIsWaiting}
 						roomInfo={roomInfo}
 						setRoomInfo={setRoomInfo}
+						finishCallback={openTimout}
 					/>
 				</div>
 			</div>
@@ -178,6 +189,7 @@ function Room() {
 				<Chatbox socket={chatSocket} roomId={id} />
 				<RoomDrawer roomId={id} settings={settings} saveCallback={saveCallback} />
 			</div>
+			<TimeoutModal isOpen={isTimeoutPromptOpen} closeCallback={closeTimeout} />
 		</RoomPageWrapper>
 	);
 }
