@@ -31,8 +31,15 @@ export const TextFieldWrapper = mStyled(TextField)({
 	},
 });
 
+export const ButtonContainerWrapper = styled.div`
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-column-gap: 1em;
+	align-items: center;
+	justify-items: center;
+`;
+
 export const ButtonWrapper = mStyled(Button)({
-	width: "30%",
 	background: theme.orange,
 	color: theme.darkGray,
 	":hover": {

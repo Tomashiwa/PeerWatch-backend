@@ -1,9 +1,14 @@
 import { Typography } from "@mui/material";
 import React, { useRef } from "react";
 import Panel from "../Panel/Panel";
-import { ButtonWrapper, FormWrapper, TextFieldWrapper } from "./RecoveryPanel.styled";
+import {
+	ButtonContainerWrapper,
+	ButtonWrapper,
+	FormWrapper,
+	TextFieldWrapper,
+} from "./RecoveryPanel.styled";
 
-function RecoveryPanel({ sendCallback }) {
+function RecoveryPanel({ sendCallback, cancelCallback }) {
 	const emailRef = useRef(null);
 
 	const send = (e) => {
@@ -28,7 +33,10 @@ function RecoveryPanel({ sendCallback }) {
 					variant="filled"
 					label="Email address"
 				/>
-				<ButtonWrapper type="submit">Send</ButtonWrapper>
+				<ButtonContainerWrapper>
+					<ButtonWrapper type="submit">Send</ButtonWrapper>
+					<ButtonWrapper onClick={cancelCallback}>Cancel</ButtonWrapper>
+				</ButtonContainerWrapper>
 			</FormWrapper>
 		</Panel>
 	);

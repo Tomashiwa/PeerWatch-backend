@@ -15,6 +15,7 @@ import RoomAlreadyIn from "./pages/Room/RoomAlreadyIn";
 import RoomFull from "./pages/Room/RoomFull";
 import RoomNotFound from "./pages/Room/RoomNotFound";
 import NotFound from "./pages/NotFound/NotFound";
+import AccountReset from "./pages/AccountReset/AccountReset";
 
 function App() {
 	const [userInfo, setUserInfo] = useState({
@@ -66,6 +67,9 @@ function App() {
 						</div>
 						<div className="app-content">
 							<Switch>
+								<Route path="/reset/:rid/:resetToken">
+									<AccountReset />
+								</Route>
 								<Route path="/room/:id/alreadyin">
 									<RoomAlreadyIn />
 								</Route>
