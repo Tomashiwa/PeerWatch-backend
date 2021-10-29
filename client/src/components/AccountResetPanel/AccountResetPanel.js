@@ -24,6 +24,7 @@ function AccountResetPanel() {
 	const [unauthFlag, setUnauthFlag] = useState(false);
 	const [unauthError, setUnauthError] = useState("");
 	const [generalFlag, setGeneralFlag] = useState(false);
+	const [isValid, setIsValid] = useState(true);
 	const history = useHistory();
 
 	const resetErrors = () => {
@@ -35,45 +36,44 @@ function AccountResetPanel() {
 
 	useEffect(() => {
 		// To-do. Verify whether the resetToken is valid
-		resetErrors();
-		
-		let isValid = false;
+		console.log(`reset token: ${resetToken}`)
 		const config = { headers: { Authorization: `Bearer ${resetToken}` } };
-		axios.post("/api/auth/verifyresettoken", {rid: rid}, config)
+		axios.post("/api/auth/authreset", {rid: rid}, config)
 			.then((res) => {
 				console.log(res.data.message);
-				isValid = true;
 			})
 			.catch((err) => {
 				if (err.response) {
 					console.log(err.response.data.message);
 				}
+				setIsValid(false);
 			});
-
-		if (!isValid) {
+	}, [resetToken, rid]);
+	
+	useEffect(() => {
+		if(!isValid) {
 			history.push("/notfound");
 		}
-	}, [history]);
+	}, [history, isValid])
 
 	const resetPass = (e) => {
 		e.preventDefault();
 		console.log(
 			`random id: ${rid}, reset token: ${resetToken}, password: ${newPassRef.current.value}, repeat password: ${repeatPassRef.current.value}`
 		);
-
+		
+		resetErrors();
 		// To-do. Integrate with backend
 		if (newPassRef.current.value === repeatPassRef.current.value) {
 			axios
-				.post("/api/auth/reset", {
+				.put("/api/auth/reset", {
 					rid: rid,
 					password: newPassRef.current.value,
 				})
 				.then((res) => {
 					console.log(res.data.message);
-					console.log(res.data.accpassword);
-					console.log(res.data.hashnewpassword);
 					
-					//returnHome();
+					returnHome();
 				})
 				.catch((err) => {
 					if (err.response) {

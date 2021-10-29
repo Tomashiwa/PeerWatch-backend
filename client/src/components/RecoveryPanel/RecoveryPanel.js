@@ -34,7 +34,7 @@ function RecoveryPanel({ sendCallback, cancelCallback }) {
 					console.log(res.data.message);
 					
 					console.log(`Sent recovery email to ${emailRef.current.value}`);
-					//sendCallback();
+					sendCallback();
 				})
 				.catch((err) => {
 					if (err.response) {

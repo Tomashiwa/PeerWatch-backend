@@ -75,7 +75,6 @@ router.post("/recover", async (req, res) => {
 		});
 	}
 	
-	
 	const email = account.email;
 	
 	// map some random id to email to keep track
@@ -138,82 +137,76 @@ Peerwatch Team`,
 	});
 });
 
-router.put("/verifyresettoken"), async (req, res) => {
-	try {
-		// change the errors when want to test what went wrong
-		const randomID = req.body.rid;
-		if (randomID === null) {
-			// no random id
-			console.log("randomID not given");
+router.post("/authreset", (req, res) => {
+	// change the errors when want to test what went wrong
+	console.log("test");
+	const randomID = req.body.rid;
+	if (randomID === null) {
+		// no random id
+		console.log("randomID not given");
 
-			return res.status(401).json({
-				message: "Reset ID invalid."
-			});
-		}
-
-		// get email from mapped random ID
-		var email = resets.get(randomID);
-		if (typeof email === 'undefined') {
-			// somehow email not mapped or invalid
-			console.log("email not mapped");
-
-			return res.status(401).json({
-				message: "Reset ID invalid."
-			});
-		}
-
-		const authHeader = req.headers["authorization"];
-		const resetToken = authHeader && authHeader.split(" ")[1];
-		if (resetToken === null) {
-			// no token
-			console.log("resetToken not given");
-
-			return res.status(401).json({
-				message: "Reset Token invalid."
-			});
-		}
-
-		// get password from accounts list
-		// Use email to find account's old password from DB to verify jwt token
-		let oldPassword = null;
-		let idx = -1;
-		for (let i = 0; i < accounts.length; i++) {
-			if (accounts[i].email === email) {
-				oldPassword = accounts[i].password;
-				idx = i;
-			}
-		}
-
-		if (oldPassword === null) {
-			console.log("Account somehow not found");
-
-			return res.status(401).json({
-				message: "Invalid email."
-			});
-		}
-
-		// check if token invalid or expired.
-		jwt.verify(resetToken, oldPassword, (err, account) => {
-			if (err) {
-				// token expired or invalid
-				console.log("token invalid or expired");
-
-				return res.status(401).json({
-					message: "Invalid link."
-				});
-			}
+		return res.status(401).json({
+			message: "Reset ID invalid."
 		});
-		
-		return res.status(200).json({
-			message: "Reset token verified."
-		});
-		
-	} catch (err) {
-		console.log("something went wrong while validating reset token");
-		console.log(err.message);
-		return res.status(500).send(err.message);
 	}
-}
+
+	// get email from mapped random ID
+	var email = resets.get(randomID);
+	if (typeof email === 'undefined') {
+		// somehow email not mapped or invalid
+		console.log("email not mapped");
+
+		return res.status(401).json({
+			message: "Reset ID invalid."
+		});
+	}
+
+	const authHeader = req.headers["authorization"];
+	const resetToken = authHeader && authHeader.split(" ")[1];
+	if (resetToken === null) {
+		// no token
+		console.log("resetToken not given");
+
+		return res.status(401).json({
+			message: "Reset Token invalid."
+		});
+	}
+
+	// get password from accounts list
+	// Use email to find account's old password from DB to verify jwt token
+	let oldPassword = null;
+	let idx = -1;
+	for (let i = 0; i < accounts.length; i++) {
+		if (accounts[i].email === email) {
+			oldPassword = accounts[i].password;
+			idx = i;
+		}
+	}
+
+	if (oldPassword === null) {
+		console.log("Account somehow not found");
+
+		return res.status(401).json({
+			message: "Invalid email."
+		});
+	}	
+
+	// check if token invalid or expired.
+	jwt.verify(resetToken, oldPassword, (err, account) => {
+		if (err) {
+			// token expired or invalid
+			console.log("token invalid or expired");
+
+			return res.status(401).json({
+				message: "Invalid link."
+			});
+		}
+	});
+		
+	return res.status(200).json({
+		message: "Reset token verified."
+	});
+});
 
 router.put("/reset", resetValidation, async (req, res) => {
 	try {
@@ -250,13 +243,14 @@ router.put("/reset", resetValidation, async (req, res) => {
 		let idx = -1;
 		const newPassword = await bcrypt.hash(req.body.password, 10);
 		for (let i = 0; i < accounts.length; i++) {
+			console.log(accounts[i].email);
 			if (accounts[i].email === email) {
 				accounts[i].password = newPassword;
 				idx = i;
 			}
 		}
 		
-		if (idx = -1) {
+		if (idx === -1) {
 			return res.status(401).json({
 				message: "Invalid email."
 			});
@@ -267,9 +261,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 
 		console.log("Password resetted");
 		return res.status(200).json({
-			message: "Password resetted successfully.",
-			accpassword: accounts[idx].password,
-			hashnewpassword: newPassword
+			message: "Password resetted successfully."
 		});
 	} catch (err) {
 		console.log("something went wrong in reset");
