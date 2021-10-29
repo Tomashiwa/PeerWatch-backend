@@ -2,10 +2,11 @@ const retrieveUserLists = () => {
 	//some way to retrieve current user list from DB?
 };
 
-// Mapping a socket to the room it is in
-const socketRoomMap = new Map();
-// Mapping a room to all the sockets in the room
-const roomSocketMap = new Map();
+const socketUserMap = new Map();
+// Mapping a user to the room it is in
+const userRoomMap = new Map();
+// Mapping a room to all the users in the room
+const roomUsersMap = new Map();
 
 module.exports = (io) => {
 	const roomIO = io.of("/chat");
@@ -24,51 +25,61 @@ module.exports = (io) => {
 			}
 		});
 
+		socket.on("SEND_KICK", (roomId, userId) => {
+			console.log(`kicking ${userId} from room ${roomId}`);
+			socket.to(roomId).emit("RECEIVE_KICK", userId);
+		});
+
+		socket.on("SEND_ROOM_SETTINGS", (roomId, capacity, settings) => {
+			console.log(`${socket.id} change ${roomId}'s capacity to ${capacity}`);
+			socket.to(roomId).emit("RECEIVE_ROOM_SETTINGS", capacity, settings);
+		});
+
 		// join the client to the room "number" received.
-		socket.on("join-room", (roomId, callback) => {
+		socket.on("join-room", (roomId, userId, callback) => {
 			console.log(`${socket.id} has joined the room ${roomId}`);
 			socket.join(roomId);
 
 			// Update mapping
-			socketRoomMap.set(socket.id, roomId);
-			let userList;
-			if (roomSocketMap.has(roomId)) {
-				userList = roomSocketMap.get(roomId);
-				userList.push({
-					id: socket.id,
-					name: `${socket.id}`,
-					isHost: userList.length == 0,
-				});
-				roomSocketMap.set(roomId, userList);
+			socketUserMap.set(socket.id, userId);
+			userRoomMap.set(userId, roomId); // To-do. change to multiple rooms ?
+
+			let newList;
+			if (roomUsersMap.has(roomId)) {
+				newList = roomUsersMap.get(roomId);
+				newList.push(userId);
+				roomUsersMap.set(roomId, newList);
+				roomIO.in(roomId).emit("update-user-list", newList, newList[0]);
 			} else {
-				roomSocketMap.set(roomId, [{ id: socket.id, name: `${socket.id}`, isHost: true }]);
-				userList = roomSocketMap.get(roomId);
+				newList = [userId];
+				roomUsersMap.set(roomId, newList);
+				roomIO.in(roomId).emit("update-user-list", newList, userId);
 			}
 
-			socket.to(roomId).emit("update-user-list", userList);
-			socket.emit("update-user-list", userList);
 			callback();
 		});
 
 		socket.on("disconnect", function () {
-			if (socketRoomMap.has(socket.id) && roomSocketMap.has(socketRoomMap.get(socket.id))) {
-				const roomId = socketRoomMap.get(socket.id);
-
-				let userList = roomSocketMap.get(roomId);
-				// might have better way. Find or idk man.
-				for (var i = 0; i < userList.length; i++) {
-					if (userList[i].name == `${socket.id}`) {
-						userList.splice(i, 1);
-					}
-				}
-
-				if (userList.length > 0) {
-					userList[0].isHost = true;
-				}
-
-				roomSocketMap.set(roomId, userList);
-				socket.to(roomId).emit("update-user-list", userList);
+			if (
+				!socketUserMap.has(socket.id) ||
+				!userRoomMap.has(socketUserMap.get(socket.id)) ||
+				!roomUsersMap.has(userRoomMap.get(socketUserMap.get(socket.id)))
+			) {
+				return;
 			}
+			const userId = socketUserMap.get(socket.id);
+			const roomId = userRoomMap.get(userId);
+
+			let newUserList = roomUsersMap.get(roomId);
+			for (let i = 0; i < newUserList.length; i++) {
+				if (newUserList[i] === userId) {
+					newUserList.splice(i, 1);
+				}
+			}
+
+			socketUserMap.delete(socket.id);
+			roomUsersMap.set(roomId, newUserList);
+			socket.to(roomId).emit("update-user-list", newUserList, newUserList[0]);
 		});
 	});
 };
