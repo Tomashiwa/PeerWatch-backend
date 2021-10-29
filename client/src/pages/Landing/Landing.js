@@ -81,7 +81,7 @@ function Landing() {
 						/>
 					)}
 					{accPanelType === PANEL_TYPE_RECOVERY && (
-						<RecoveryPanel sendCallback={toLogin} />
+						<RecoveryPanel sendCallback={toLogin} cancelCallback={toLogin} />
 					)}
 				</div>
 			)}

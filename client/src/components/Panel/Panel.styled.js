@@ -11,7 +11,8 @@ export const PanelWrapper = styled.div`
 
 	padding: 25px;
 
-	p {
+	p,
+	h5 {
 		color: ${(props) => props.theme.white};
 	}
 `;

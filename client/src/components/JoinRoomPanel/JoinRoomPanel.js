@@ -23,7 +23,6 @@ function JoinRoomPanel() {
 		if (!uuidValidate(id)) {
 			setHasError(true);
 			setErrorMsg(ERROR_MSG_INVALID_FORMAT);
-			console.log(`Invalid room id format... (Given id: ${id})`);
 		} else {
 			// Reject if the room is not full and the user is not already in
 			const getUsers = axios.get(`/api/rooms/${id}/users`);
@@ -37,11 +36,9 @@ function JoinRoomPanel() {
 					if (userIds.includes(userInfo.userId)) {
 						setHasError(true);
 						setErrorMsg(ERROR_MSG_ALREADY_IN);
-						console.log(`You are already in that room!`);
 					} else if (count >= capacity) {
 						setHasError(true);
 						setErrorMsg(ERROR_MSG_FULL_ROOM);
-						console.log(`Room ${id} is already full (${count} / ${capacity})`);
 					} else {
 						setHasError(false);
 						setErrorMsg("");

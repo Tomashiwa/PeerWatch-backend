@@ -49,8 +49,6 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					password: passRef.current.value,
 				})
 				.then((res) => {
-					//console.log("registered");
-
 					// Add to context
 					const newUserInfo = {
 						userId: res.data.userId,
@@ -60,19 +58,16 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 						isLoaded: true,
 					};
 					setUserInfo(newUserInfo);
-					//console.log("added user to context");
 
 					// Add token to browser
-					console.log(`[Register] Set token: ${res.data.token}`);
-
 					localStorage.setItem("token", res.data.token);
+
 					successCallback();
 				})
 				.catch((err) => {
 					if (err.response) {
 						if (err.response.status === CREDENTIALS_ERROR_CODE) {
 							const errData = err.response.data.errors;
-							//console.log(errData);
 							let passErrMsgSet = false;
 							for (let i = 0; i < errData.length; i++) {
 								if (errData[i].param === "displayName") {
@@ -97,7 +92,6 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					}
 				});
 		} else {
-			//console.log("password not the same");
 			setPasswordAgainFlag(true);
 		}
 	};

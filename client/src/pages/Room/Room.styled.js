@@ -49,6 +49,11 @@ const RoomPageWrapper = styled.div`
 		.chatbox {
 			height: 50%;
 		}
+
+		.sidebar-btn-container {
+			display: grid;
+			grid-template-columns: 3fr 1fr;
+		}
 	}
 `;
 

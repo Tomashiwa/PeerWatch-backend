@@ -55,8 +55,9 @@ function VideoPlayer({
 	setIsWaiting,
 	roomInfo,
 	setRoomInfo,
+	finishCallback,
 }) {
-	const [isPlaying, setIsPlaying] = useState(true);
+	const [isPlaying, setIsPlaying] = useState(false);
 	const [buffererId, setBuffererId] = useState(UNAVALIABLE);
 	const [isInitialSync, setIsInitialSync] = useState(true);
 	const [playbackRate, setPlaybackRate] = useState(1);
@@ -154,11 +155,7 @@ function VideoPlayer({
 	}, []);
 	const playCallback = () => {
 		if (!isPlaying) {
-			// Host: Broadcast PLAY event to all users
 			socket.emit("PLAY_ALL", roomId);
-
-			// Host: Update status in DB (?)
-
 			setIsPlaying(true);
 		}
 	};
@@ -169,11 +166,7 @@ function VideoPlayer({
 	}, []);
 	const pauseCallback = () => {
 		if (isPlaying && buffererId === UNAVALIABLE) {
-			// Host: Broadcast PAUSE event to all users
 			socket.emit("PAUSE_ALL", roomId);
-
-			// Host: Update status in DB(?)
-
 			setIsPlaying(false);
 		}
 	};
@@ -187,43 +180,6 @@ function VideoPlayer({
 		socket.emit("PLAYBACK_RATE_CHANGE_ALL", roomId, rateObj.data);
 	};
 
-	// Synchronize playback settings between users
-	const querySettings = useCallback(
-		(recipientId) => {
-			if (user.isHost) {
-				const settings = {
-					isPlaying,
-					playbackRate,
-				};
-				socket.emit("REPLY_SETTINGS", roomId, recipientId, settings);
-			}
-		},
-		[isPlaying, playbackRate, roomId, socket, user.isHost]
-	);
-	const receiveSettings = useCallback(
-		(recipientId, settings) => {
-			if (socket.id === recipientId) {
-				setPlaybackRate(settings.playbackRate);
-				setIsPlaying(settings.isPlaying);
-			}
-		},
-		[socket]
-	);
-	const synchroniseSettings = () => {
-		if (!user.isHost) {
-			socket.emit("REQUEST_SETTINGS", roomId);
-		}
-	};
-
-	// Callback when the player completed initial loading and ready to go
-	const readyCallback = (player) => {
-		// Attach callback for change in playback rate
-		player.getInternalPlayer().addEventListener("onPlaybackRateChange", rateChangeCallback);
-
-		synchroniseSettings();
-		bufferStartCallback();
-	};
-
 	// Initialize a HOLD when a user buffers
 	const hold = useCallback(
 		(sourceId) => {
@@ -232,13 +188,13 @@ function VideoPlayer({
 		},
 		[debouncedSetPlaying]
 	);
-	const bufferStartCallback = () => {
+	const bufferStartCallback = useCallback(() => {
 		if (buffererId === UNAVALIABLE) {
 			setBuffererId(socket.id);
 			socket.emit("REQUEST_HOLD", roomId, socket.id);
 			setIsPlaying(true);
 		}
-	};
+	}, [socket, buffererId, roomId]);
 
 	// When buffering completes, sync-up the timing with other users via handshaking
 	const prepareRelease = useCallback(
@@ -296,6 +252,49 @@ function VideoPlayer({
 			}
 		}
 	}, [socket, user]);
+
+	// Synchronize playback settings between users
+	const querySettings = useCallback(
+		(recipientId) => {
+			if (user.isHost) {
+				const settings = {
+					isPlaying,
+					playbackRate,
+				};
+				socket.emit("REPLY_SETTINGS", roomId, recipientId, settings);
+			}
+		},
+		[isPlaying, playbackRate, roomId, socket, user.isHost]
+	);
+	const receiveSettings = useCallback(
+		(recipientId, settings) => {
+			if (socket.id === recipientId) {
+				setPlaybackRate(settings.playbackRate);
+
+				if (settings.isPlaying) {
+					bufferStartCallback();
+				} else {
+					setIsPlaying(false);
+				}
+			}
+		},
+		[socket, bufferStartCallback]
+	);
+	const synchroniseSettings = () => {
+		if (!user.isHost) {
+			socket.emit("REQUEST_SETTINGS", roomId);
+		} else {
+			setIsPlaying(true);
+		}
+	};
+
+	// Callback when the player completed initial loading and ready to go
+	const readyCallback = (player) => {
+		// Attach callback for change in playback rate
+		player.getInternalPlayer().addEventListener("onPlaybackRateChange", rateChangeCallback);
+
+		synchroniseSettings();
+	};
 
 	// Apply event handlers when the player re-renders
 	useEffect(() => {
@@ -360,7 +359,6 @@ function VideoPlayer({
 			playing={isPlaying}
 			playbackRate={playbackRate}
 			controls
-			loop
 			muted
 			config={{
 				youtube: {
@@ -378,6 +376,7 @@ function VideoPlayer({
 			onReady={readyCallback}
 			onBuffer={bufferStartCallback}
 			onBufferEnd={bufferEndCallback}
+			onEnded={finishCallback}
 			style={{
 				pointerEvents: buffererId === UNAVALIABLE ? "auto" : "none",
 				filter: buffererId === UNAVALIABLE ? "" : "blur(5px)",

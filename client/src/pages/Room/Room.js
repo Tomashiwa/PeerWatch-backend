@@ -1,69 +1,80 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
-import { useParams } from "react-router";
+import { useHistory, useParams } from "react-router";
+import { io } from "socket.io-client";
+import { CircularProgress, Typography } from "@mui/material";
+import axios from "axios";
+
+import URL from "../../util/url";
+
 import Chatbox from "../../components/ChatBox/Chatbox";
-import RoomSettings from "../../components/RoomSettings/RoomSettings";
 import VideoLinker from "../../components/VideoLinker/VideoLinker";
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import Watchmates from "../../components/Watchmates/Watchmates";
-import RoomPageWrapper from "./Room.styled";
-import { io } from "socket.io-client";
-import URL from "../../util/url";
-import { CircularProgress, Typography } from "@mui/material";
-import axios from "axios";
 import UserContext from "../../components/Context/UserContext";
-import { useHistory } from "react-router";
-
-const initialSettings = {
-	capacity: 15,
-	users: [
-		{ id: 1, name: "User1", canChat: true, canVideo: true },
-		{ id: 2, name: "User2", canChat: false, canVideo: true },
-		{ id: 3, name: "User3", canChat: false, canVideo: true },
-		{ id: 4, name: "User4", canChat: false, canVideo: true },
-		{ id: 5, name: "User5", canChat: false, canVideo: true },
-		{ id: 6, name: "User6", canChat: false, canVideo: true },
-		{ id: 7, name: "User7", canChat: false, canVideo: true },
-		{ id: 8, name: "User8", canChat: false, canVideo: true },
-	],
-};
-
-const blankUser = {
-	id: "",
-	name: "",
-	isHost: false,
-};
+import RoomDrawer from "../../components/RoomDrawer/RoomDrawer";
+import RoomPageWrapper from "./Room.styled";
+import TimeoutModal from "../../components/TimeoutModal/TimeoutModal";
 
 function Room() {
 	const { id } = useParams();
-	const [user, setUser] = useState(blankUser);
+	const [user, setUser] = useState({});
 	const [users, setUsers] = useState([]);
-	const [settings] = useState(initialSettings);
-	// temp commented out to remove warnings. Remove above when setSettings is used.
-	//const [settings, setSettings] = useState(initialSettings);
+	const [settings, setSettings] = useState({});
 	const [isWaiting, setIsWaiting] = useState(true);
+	const [isLinkerDisabled, setIsLinkerDisabled] = useState(false);
+	const [isChatDisabled, setIsChatDisabled] = useState(false);
 	const [chatSocket, setChatSocket] = useState(null);
 	const [videoSocket, setVideoSocket] = useState(null);
 	const [roomInfo, setRoomInfo] = useState({});
-	const history = useHistory();
+	const [isTimeoutPromptOpen, setIsTimeoutPromptOpen] = useState(false);
 
+	const history = useHistory();
 	const { userInfo } = useContext(UserContext);
 
-	// temp commented out to remove warnings
-	/*
+	// Handle changing of video URL
 	const linkCallback = (url) => {
 		setRoomInfo({ ...roomInfo, url });
 	};
-	*/
 
-	const saveCallback = () => {
-		console.log("SETTINGS SAVED");
-		// Broadcast settings to all other users;
+	// Handle changing of room settings
+	const receiveSettings = useCallback(
+		(newCapacity, newSettings) => {
+			setRoomInfo({ ...roomInfo, newCapacity });
+			setSettings(newSettings);
+		},
+		[roomInfo]
+	);
+	const saveCallback = (newCapacity, newSettings) => {
+		setRoomInfo({ ...roomInfo, capacity: newCapacity });
+		setSettings(newSettings);
+		chatSocket.emit("SEND_ROOM_SETTINGS", id, newCapacity, newSettings);
 	};
 
-	// Join room, retrieve room's info and connect to its sockets
-	useEffect(() => {
-		console.log(userInfo);
+	// Handle kicking of users
+	const receiveKick = useCallback(
+		(userId) => {
+			if (userId === user.userId) {
+				history.push("/");
+				console.log("GOT KICKED");
+			}
+		},
+		[user, history]
+	);
+	const kickCallback = (userId) => {
+		console.log(`Kick user ${userId}`);
+		chatSocket.emit("SEND_KICK", id, userId);
+	};
 
+	const openTimout = () => {
+		setIsTimeoutPromptOpen(true);
+	};
+
+	const closeTimeout = () => {
+		setIsTimeoutPromptOpen(false);
+	};
+
+	// Guide user to join room, retrieve room's info and connect to its sockets
+	useEffect(() => {
 		let newChatSocket = null;
 		let newVideoSocket = null;
 		const serverUrl =
@@ -79,25 +90,16 @@ function Room() {
 				const userIds = res[0].data.map((entry) => entry.userId);
 				const { capacity, count } = res[1].data;
 
-				// MODIFY ROUTER TO REDIRECT/DEFAULT TO THE "/" PAGE IF NOT AUTHENTICATED
-
 				if (userIds.includes(userInfo.userId)) {
-					// setHasError(true);
-					// setErrorMsg(ERROR_MSG_ALREADY_IN);
-					console.log(`You are already in that room!`);
-				} else if (count >= capacity) {
-					// setHasError(true);
-					// setErrorMsg(ERROR_MSG_FULL_ROOM);
-					console.log(`Room ${id} is already full (${count} / ${capacity})`);
+					history.push(`/room/${id}/alreadyin`);
+				} else if (count && capacity && count >= capacity) {
+					history.push(`/room/${id}/full`);
 				} else {
-					// setHasError(false);
-					// setErrorMsg("");
 					axios
 						.post("/api/rooms/join", { userId: userInfo.userId, roomId: id })
-						.then((res) => {
+						.then((joinRes) => {
 							// Retrieve room info
 							axios.get(`/api/rooms/${id}`).then((roomRes) => {
-								console.log("Retrieved room data");
 								let newRoomInfo = roomRes.data.room;
 								if (!newRoomInfo.url || newRoomInfo.url.length === 0) {
 									newRoomInfo.url = URL.FALLBACK_VIDEO;
@@ -112,13 +114,28 @@ function Room() {
 							});
 							setChatSocket(newChatSocket);
 							setVideoSocket(newVideoSocket);
+
+							// TEMPORARY PLACEHOLDER
+							// To-do: GET settings from DB
+							setSettings({
+								users: joinRes.data.map((user) => {
+									return {
+										...user,
+										displayName: user.userId,
+										canChat: true,
+										canVideo: true,
+									};
+								}),
+							});
 						})
 						.catch((err) => {
+							history.push("/room_notfound");
 							console.log(err);
 						});
 				}
 			})
 			.catch((err) => {
+				history.push("/room_notfound");
 				console.log(err);
 			});
 
@@ -130,35 +147,74 @@ function Room() {
 		};
 	}, [id, userInfo, history]);
 
+	// Tag socket ID with user's ID
 	useEffect(() => {
 		if (videoSocket && userInfo) {
 			videoSocket.emit("SUBSCRIBE_USER_TO_SOCKET", userInfo.userId);
 		}
 	}, [videoSocket, userInfo]);
 
+	// Refresh the list of users and settings
 	const updateUserList = useCallback(
-		(newUserList) => {
-			if (chatSocket) {
-				for (let i = 0; i < newUserList.length; i++) {
-					if (newUserList[i].id === chatSocket.id) {
-						setUser(newUserList[i]);
-						break;
+		(userList, hostId) => {
+			axios
+				.get(`/api/rooms/${id}/users`)
+				.then((res) => {
+					const newUsers = res.data.filter((user) => userList.includes(user.userId));
+					for (let i = 0; i < newUsers.length; i++) {
+						newUsers[i] = { ...newUsers[i], isHost: newUsers[i].userId === hostId };
+						if (newUsers[i].userId === userInfo.userId) {
+							const currUser = newUsers.splice(i, 1)[0];
+							newUsers.unshift(currUser);
+							setUser(currUser);
+						}
 					}
-				}
-			}
-			setUsers(newUserList);
+					setUsers(newUsers);
+
+					// TEMPORARY PLACEHOLDER
+					// To-do: GET settings from DB
+					setSettings({
+						users: newUsers.map((user) => {
+							return {
+								...user,
+								displayName: user.userId,
+								canChat: true,
+								canVideo: true,
+							};
+						}),
+					});
+				})
+				.catch((err) => console.log(err));
 		},
-		[setUsers, chatSocket]
+		[setUsers, userInfo, id]
 	);
 
+	// Attach/Deattach event on/off the chat socket
 	useEffect(() => {
 		if (chatSocket) {
 			chatSocket.on("update-user-list", updateUserList);
+			chatSocket.on("RECEIVE_ROOM_SETTINGS", receiveSettings);
+			chatSocket.on("RECEIVE_KICK", receiveKick);
 			return () => {
 				chatSocket.off("update-user-list", updateUserList);
+				chatSocket.off("RECEIVE_ROOM_SETTINGS", receiveSettings);
+				chatSocket.off("RECEIVE_KICK", receiveKick);
 			};
 		}
-	}, [chatSocket, updateUserList]);
+	}, [chatSocket, updateUserList, receiveSettings, receiveKick]);
+
+	// Enable/disable chatbox and linker based on settings
+	useEffect(() => {
+		if (settings && settings.users) {
+			const userSettings = settings.users.filter(
+				(user) => user.userId === userInfo.userId
+			)[0];
+			if (userSettings) {
+				setIsChatDisabled(!userSettings.canChat);
+				setIsLinkerDisabled(!userSettings.canVideo);
+			}
+		}
+	}, [settings, userInfo]);
 
 	return (
 		<RoomPageWrapper>
@@ -181,23 +237,24 @@ function Room() {
 						setIsWaiting={setIsWaiting}
 						roomInfo={roomInfo}
 						setRoomInfo={setRoomInfo}
+						finishCallback={openTimout}
 					/>
 				</div>
 			</div>
 			<div className="room-sidebar">
-				<VideoLinker
-					linkCallback={() => {
-						console.log(userInfo);
-					}}
-				/>
+				<VideoLinker isDisabled={isLinkerDisabled} linkCallback={linkCallback} />
 				<Watchmates users={users} />
-				<Chatbox socket={chatSocket} roomId={id} />
-				<RoomSettings
-					capacity={settings.capacity}
-					users={settings.users}
+				<Chatbox socket={chatSocket} roomId={id} isDisabled={isChatDisabled} />
+				<RoomDrawer
+					roomId={id}
+					isHost={user.isHost}
+					capacity={roomInfo.capacity}
+					settings={settings}
+					kickCallback={kickCallback}
 					saveCallback={saveCallback}
 				/>
 			</div>
+			<TimeoutModal isOpen={isTimeoutPromptOpen} closeCallback={closeTimeout} />
 		</RoomPageWrapper>
 	);
 }
