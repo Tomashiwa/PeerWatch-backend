@@ -65,9 +65,7 @@ var resetValidation = [
 
 router.post("/recover", async (req, res) => {
 	// find account with email
-	console.log(req.body.email);
 	const account = accounts.find((account) => account.email === req.body.email);
-	console.log(account);
 	if (typeof account === 'undefined') {
 		// email not found.
 		console.log("email not found");
@@ -77,11 +75,9 @@ router.post("/recover", async (req, res) => {
 		});
 	}
 	
-	console.log("email found");
 	
 	const email = account.email;
 	
-	console.log("email set");
 	// map some random id to email to keep track
 	const randomID = crypto.randomBytes(16).toString("hex");
 	resets.set(randomID, email);
