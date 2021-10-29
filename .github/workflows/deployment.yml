@@ -53,8 +53,8 @@ jobs:
     - name: Beanstalk Deploy for app
       uses: einaregilsson/beanstalk-deploy@v18
       with:
-        aws_access_key: ${{secrets.AWS_ACCESS_KEY_ID}}
-        aws_secret_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        aws_access_key: ${{secrets.AWS_EB_ACCESS_KEY}}
+        aws_secret_key: ${{secrets.AWS_EB_SECRET_KEY}}
         application_name: peerwatch
         environment_name: Peerwatch-env
         region: ap-southeast-1
