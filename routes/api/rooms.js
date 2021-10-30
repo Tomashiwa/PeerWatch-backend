@@ -148,7 +148,15 @@ router.put("/settings", (req, res) => {
 	    if (derr) {
 	        return res.status(500).json({ message: derr.message });
 	    }
-		res.status(200).json({ message: "Settings updated..." });
+        const selectSql = "SELECT users_in_rooms.userId, users.displayName, users_in_rooms.urlPermission, users_in_rooms.chatPermission" +
+        " FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
+        db.query(selectSql, [roomId], (selectErr, selectRes) => {
+            if (derr) {
+                return res.status(500).json({ message: selectErr.message });
+            }
+            console.log(selectRes);
+            res.status(200).json(selectRes);
+        });
 	});
 });
 
