@@ -3,7 +3,7 @@ import { ButtonWrapper } from "../ChatBox/ChatInput.styled";
 import RoomSettings from "../RoomSettings/RoomSettings";
 import { RoomDrawerWrapper } from "./RoomDrawer.styled";
 
-function RoomDrawer({ roomId, settings, saveCallback }) {
+function RoomDrawer({ roomId, isHost, capacity, settings, kickCallback, saveCallback }) {
 	const copy = (content) => {
 		const element = document.createElement("textarea");
 		element.value = content;
@@ -22,14 +22,18 @@ function RoomDrawer({ roomId, settings, saveCallback }) {
 	};
 
 	return (
-		<RoomDrawerWrapper>
+		<RoomDrawerWrapper isHost={isHost}>
 			<ButtonWrapper onClick={copyCode}>Share via code</ButtonWrapper>
 			<ButtonWrapper onClick={copyLink}>Share via link</ButtonWrapper>
-			<RoomSettings
-				capacity={settings.capacity}
-				users={settings.users}
-				saveCallback={saveCallback}
-			/>
+			{isHost && (
+				<RoomSettings
+					roomId={roomId}
+					capacity={capacity}
+					settings={settings}
+					kickCallback={kickCallback}
+					saveCallback={saveCallback}
+				/>
+			)}
 		</RoomDrawerWrapper>
 	);
 }

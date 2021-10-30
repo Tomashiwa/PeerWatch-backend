@@ -122,7 +122,16 @@ router.post("/join", (req, res) => {
 			if (joinRoomErr) {
 				return res.status(500).json({ message: joinRoomErr.message });
 			}
-			res.status(200).json({ message: "User joined room.." });
+
+			const usersSql = "SELECT * FROM users_in_rooms WHERE roomId = ?";
+
+			db.query(usersSql, [roomId], (usersErr, usersRes) => {
+				if (usersErr) {
+					return res.status(500).json({ message: usersErr.message });
+				}
+				console.log(usersRes);
+				res.status(200).json(usersRes);
+			});
 		});
 	});
 });

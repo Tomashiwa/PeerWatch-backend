@@ -5,7 +5,7 @@ import { theme } from "../../styles/theme";
 
 export const RoomDrawerWrapper = styled.div`
 	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
+	grid-template-columns: ${(props) => (props.isHost ? "1fr 1fr 1fr" : "1fr 1fr")};
 	grid-column-gap: 1em;
 `;
 

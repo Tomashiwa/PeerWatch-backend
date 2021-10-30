@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { TextFieldWrapper } from "./VideoLinker.styled";
 
-function VideoLinker({ linkCallback }) {
+function VideoLinker({ isDisabled = false, linkCallback }) {
 	const inputRef = useRef(null);
 
 	const submitLink = (e) => {
@@ -12,7 +12,11 @@ function VideoLinker({ linkCallback }) {
 
 	return (
 		<form onSubmit={submitLink}>
-			<TextFieldWrapper inputRef={inputRef} placeholder="Enter video link here!" />
+			<TextFieldWrapper
+				disabled={isDisabled}
+				inputRef={inputRef}
+				placeholder="Enter video link here!"
+			/>
 		</form>
 	);
 }

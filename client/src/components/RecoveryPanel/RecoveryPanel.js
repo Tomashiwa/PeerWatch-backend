@@ -1,6 +1,7 @@
 import { Typography } from "@mui/material";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Panel from "../Panel/Panel";
+import axios from "axios";
 import {
 	ButtonContainerWrapper,
 	ButtonWrapper,
@@ -8,15 +9,43 @@ import {
 	TextFieldWrapper,
 } from "./RecoveryPanel.styled";
 
+const UNAUTH_ERROR_CODE = 401;
+
 function RecoveryPanel({ sendCallback, cancelCallback }) {
 	const emailRef = useRef(null);
-
+	const [unauthFlag, setUnauthFlag] = useState(false);
+	const [unauthError, setUnauthError] = useState("");
+	const [generalFlag, setGeneralFlag] = useState(false);
+	
+	const resetErrors = () => {
+		setGeneralFlag(false);
+		setUnauthFlag(false);
+	};
+	
 	const send = (e) => {
 		e.preventDefault();
-
-		console.log(`Send recovery email to ${emailRef.current.value}`);
-
-		sendCallback();
+		
+		resetErrors();
+		
+		axios.post("/api/auth/recover", {
+					email: emailRef.current.value
+				})
+				.then((res) => {
+					console.log(res.data.message);
+					
+					console.log(`Sent recovery email to ${emailRef.current.value}`);
+					sendCallback();
+				})
+				.catch((err) => {
+					if (err.response) {
+						if (err.response.status === UNAUTH_ERROR_CODE) {
+							setUnauthFlag(true);
+							setUnauthError(err.response.data.message);
+						} else {
+							setGeneralFlag(true);
+						}
+					}
+				});
 	};
 
 	return (
@@ -26,12 +55,20 @@ function RecoveryPanel({ sendCallback, cancelCallback }) {
 				Please provide the email address you registered with down below. We will be sending
 				you a link to reset your password!
 			</Typography>
+			{generalFlag && (
+					<p style={{ color: "red" }}>
+						Error when sending email to your email address. Please ask the PeerWatch team for
+						assistance.
+					</p>
+			)}
 			<FormWrapper onSubmit={send}>
 				<TextFieldWrapper
 					required
+					error={unauthFlag}
 					inputRef={emailRef}
 					variant="filled"
 					label="Email address"
+					helperText={unauthFlag ? unauthError : ""}
 				/>
 				<ButtonContainerWrapper>
 					<ButtonWrapper type="submit">Send</ButtonWrapper>

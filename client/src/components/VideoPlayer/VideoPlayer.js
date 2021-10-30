@@ -55,6 +55,7 @@ function VideoPlayer({
 	setIsWaiting,
 	roomInfo,
 	setRoomInfo,
+	finishCallback,
 }) {
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [buffererId, setBuffererId] = useState(UNAVALIABLE);
@@ -150,7 +151,6 @@ function VideoPlayer({
 
 	// Synchronise PLAY status between players
 	const play = useCallback(() => {
-		console.log("pinged to play");
 		setIsPlaying(true);
 	}, []);
 	const playCallback = () => {
@@ -193,7 +193,6 @@ function VideoPlayer({
 			setBuffererId(socket.id);
 			socket.emit("REQUEST_HOLD", roomId, socket.id);
 			setIsPlaying(true);
-			console.log("player as a bufferer and ask all to HOLD");
 		}
 	}, [socket, buffererId, roomId]);
 
@@ -238,7 +237,6 @@ function VideoPlayer({
 			setBuffererId(newBuffererId);
 			if (user.isHost) {
 				setIsPlaying(true);
-				console.log("Plays as u are the host when re-assigning bufferer");
 			}
 		},
 		[user]
@@ -249,7 +247,6 @@ function VideoPlayer({
 		if (socket) {
 			setBuffererId(UNAVALIABLE);
 			if (user.isHost) {
-				console.log("Plays as you are the host after the bufferer dc");
 				setIsPlaying(true);
 				playerRef.current.seekTo(0, "seconds");
 			}
@@ -272,9 +269,6 @@ function VideoPlayer({
 	const receiveSettings = useCallback(
 		(recipientId, settings) => {
 			if (socket.id === recipientId) {
-				console.log("Received settings:");
-				console.log(settings);
-
 				setPlaybackRate(settings.playbackRate);
 
 				if (settings.isPlaying) {
@@ -382,6 +376,7 @@ function VideoPlayer({
 			onReady={readyCallback}
 			onBuffer={bufferStartCallback}
 			onBufferEnd={bufferEndCallback}
+			onEnded={finishCallback}
 			style={{
 				pointerEvents: buffererId === UNAVALIABLE ? "auto" : "none",
 				filter: buffererId === UNAVALIABLE ? "" : "blur(5px)",

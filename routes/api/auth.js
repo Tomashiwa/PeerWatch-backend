@@ -12,7 +12,29 @@ router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
 // Delete when done integrating recover and reset with DB
-const accounts = [];
+const accounts = [
+	{
+		userId: 1,
+		email: "random@outlook.com",
+		displayName: "random",
+		password: "random",
+		isGoogle: false,
+	},
+	{
+		userId: 2,
+		email: "cs3219test@outlook.com",
+		displayName: "cs3219",
+		password: "$10$Q3vJw6t1PFQS6tQQxCjWguKs4.qFSyBeZ5ECyrTmUFcQfkLogVXMy",
+		isGoogle: false,
+	},
+	{
+		userId: 3,
+		email: "test@outlook.com",
+		displayName: "test",
+		password: "test",
+		isGoogle: false,
+	},
+];
 
 // Might wanna store this in db?
 const resets = new Map();
@@ -44,16 +66,17 @@ var resetValidation = [
 router.post("/recover", async (req, res) => {
 	// find account with email
 	const account = accounts.find((account) => account.email === req.body.email);
-	if (account === null) {
+	if (typeof account === "undefined") {
 		// email not found.
 		console.log("email not found");
 
 		return res.status(401).json({
-			message: "Account not registered.",
+			message: "Email not registered.",
 		});
 	}
 
 	const email = account.email;
+
 	// map some random id to email to keep track
 	const randomID = crypto.randomBytes(16).toString("hex");
 	resets.set(randomID, email);
@@ -66,7 +89,7 @@ router.post("/recover", async (req, res) => {
 	console.log(`signed reset token: ${resetToken}`);
 
 	// Need change the link later.
-	const link = "http://localhost:3000/resetapi/" + randomID + "/" + resetToken;
+	const link = "http://localhost:3000/reset/" + randomID + "/" + resetToken;
 	console.log(`link: ${link}`);
 
 	//send email
@@ -114,16 +137,88 @@ Peerwatch Team`,
 	});
 });
 
-router.put("/reset/:_id", resetValidation, async (req, res) => {
+router.post("/authreset", (req, res) => {
+	// change the errors when want to test what went wrong
+	const randomID = req.body.rid;
+	if (randomID === null) {
+		// no random id
+		console.log("randomID not given");
+
+		return res.status(401).json({
+			message: "Reset ID invalid.",
+		});
+	}
+
+	// get email from mapped random ID
+	var email = resets.get(randomID);
+	if (typeof email === "undefined") {
+		// somehow email not mapped or invalid
+		console.log("email not mapped");
+
+		return res.status(401).json({
+			message: "Reset ID invalid.",
+		});
+	}
+
+	const authHeader = req.headers["authorization"];
+	const resetToken = authHeader && authHeader.split(" ")[1];
+	if (resetToken === null) {
+		// no token
+		console.log("resetToken not given");
+
+		return res.status(401).json({
+			message: "Reset Token invalid.",
+		});
+	}
+
+	// get password from accounts list
+	// Use email to find account's old password from DB to verify jwt token
+	let oldPassword = null;
+	let idx = -1;
+	for (let i = 0; i < accounts.length; i++) {
+		if (accounts[i].email === email) {
+			oldPassword = accounts[i].password;
+			idx = i;
+		}
+	}
+
+	if (oldPassword === null) {
+		console.log("Account somehow not found");
+
+		return res.status(401).json({
+			message: "Invalid email.",
+		});
+	}
+
+	// check if token invalid or expired.
+	jwt.verify(resetToken, oldPassword, (err, account) => {
+		if (err) {
+			// token expired or invalid
+			console.log("token invalid or expired");
+
+			return res.status(401).json({
+				message: "Invalid link.",
+			});
+		} else {
+			console.log("token verified");
+
+			return res.status(200).json({
+				message: "Reset token verified.",
+			});
+		}
+	});
+});
+
+router.put("/reset", resetValidation, async (req, res) => {
 	try {
 		// change the errors when want to test what went wrong
-		const randomID = req.params._id;
+		const randomID = req.body.rid;
 		if (randomID === null) {
 			// no random id
 			console.log("randomID not given");
 
 			return res.status(401).json({
-				message: "Invalid link.",
+				message: "Reset ID invalid.",
 			});
 		}
 
@@ -131,54 +226,12 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 		var email = resets.get(randomID);
 		if (typeof email === undefined) {
 			// somehow email not mapped or invalid
-			console.log("email somehow not mapped");
+			console.log("email not mapped");
 
 			return res.status(401).json({
-				message: "Invalid link.",
+				message: "Reset ID invalid.",
 			});
 		}
-
-		const authHeader = req.headers["authorization"];
-		const resetToken = authHeader && authHeader.split(" ")[1];
-		if (resetToken === null) {
-			// no token
-			console.log("resetToken not given");
-
-			return res.status(401).json({
-				message: "Invalid link.",
-			});
-		}
-
-		// get password from accounts list
-		// Use email to find account's old password from DB to verify jwt token
-		let oldPassword = null;
-		let idx = -1;
-		for (let i = 0; i < accounts.length; i++) {
-			if (accounts[i].email === email) {
-				oldPassword = accounts[i].password;
-				idx = i;
-			}
-		}
-
-		if (oldPassword === null) {
-			console.log("Account somehow not found");
-
-			return res.status(401).json({
-				message: "Account somehow not found.",
-			});
-		}
-
-		// check if token invalid or expired.
-		jwt.verify(resetToken, oldPassword, (err, account) => {
-			if (err) {
-				// token expired or invalid
-				console.log("token invalid or expired");
-
-				return res.status(401).json({
-					message: "Invalid link.",
-				});
-			}
-		});
 
 		// if password has validation error
 		const errors = await validationResult(req);
@@ -186,9 +239,22 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 			return res.status(422).json({ errors: errors.array() });
 		}
 
+		// Set new password
+		// if email somehow does not exist, then return error.
+		let idx = -1;
 		const newPassword = await bcrypt.hash(req.body.password, 10);
-		// set new password for account with the email
-		accounts[idx].password = newPassword;
+		for (let i = 0; i < accounts.length; i++) {
+			if (accounts[i].email === email) {
+				accounts[i].password = newPassword;
+				idx = i;
+			}
+		}
+
+		if (idx === -1) {
+			return res.status(401).json({
+				message: "Invalid email.",
+			});
+		}
 
 		// delete mapping since able to reset
 		resets.delete(randomID);

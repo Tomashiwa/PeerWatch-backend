@@ -9,7 +9,7 @@ function Watchmates({ users }) {
 			<ListWrapper>
 				{users.map((user) => {
 					return (
-						<ListItem key={user.id}>{`${user.name} ${
+						<ListItem key={user.userId}>{`${user.userId} ${
 							user.isHost ? "(Host)" : ""
 						}`}</ListItem>
 					);
