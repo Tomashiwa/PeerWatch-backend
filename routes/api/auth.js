@@ -11,8 +11,8 @@ require("dotenv").config();
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-// Might wanna store this in db?
 const resets = new Map();
+const endpoint = process.env.NODE_ENV === "production" ? "http://54.179.111.98:5000/" : "http://localhost:3000/";
 
 var registerValidation = [
 	check("email", "Email must be of valid email format.").isEmail(),
@@ -62,7 +62,7 @@ router.post("/recover", async (req, res) => {
         console.log(`signed reset token: ${resetToken}`);
 
         // Need change the link later.
-        const link = "http://localhost:3000/reset/" + randomID + "/" + resetToken;
+        const link = endpoint + "reset/" + randomID + "/" + resetToken;
         console.log(`link: ${link}`);
 
         //send email
@@ -104,9 +104,7 @@ Peerwatch Team`,
 
         // remove message after testing
         return res.status(200).json({
-            message: "Email sent",
-            ID: randomID,
-            token: resetToken,
+            message: "Email sent"
         });
     });
 });
