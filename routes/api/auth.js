@@ -13,27 +13,27 @@ router.use(bodyParser.json());
 
 // Delete when done integrating recover and reset with DB
 const accounts = [
-{
-	userId: 1,
-	email: "random@outlook.com",
-	displayName: "random",
-	password: "random",
-	isGoogle: false
-},
-{
-	userId: 2,
-	email: "cs3219test@outlook.com",
-	displayName: "cs3219",
-	password: "$10$Q3vJw6t1PFQS6tQQxCjWguKs4.qFSyBeZ5ECyrTmUFcQfkLogVXMy",
-	isGoogle: false
-},
-{
-	userId: 3,
-	email: "test@outlook.com",
-	displayName: "test",
-	password: "test",
-	isGoogle: false
-}
+	{
+		userId: 1,
+		email: "random@outlook.com",
+		displayName: "random",
+		password: "random",
+		isGoogle: false,
+	},
+	{
+		userId: 2,
+		email: "cs3219test@outlook.com",
+		displayName: "cs3219",
+		password: "$10$Q3vJw6t1PFQS6tQQxCjWguKs4.qFSyBeZ5ECyrTmUFcQfkLogVXMy",
+		isGoogle: false,
+	},
+	{
+		userId: 3,
+		email: "test@outlook.com",
+		displayName: "test",
+		password: "test",
+		isGoogle: false,
+	},
 ];
 
 // Might wanna store this in db?
@@ -66,7 +66,7 @@ var resetValidation = [
 router.post("/recover", async (req, res) => {
 	// find account with email
 	const account = accounts.find((account) => account.email === req.body.email);
-	if (typeof account === 'undefined') {
+	if (typeof account === "undefined") {
 		// email not found.
 		console.log("email not found");
 
@@ -74,9 +74,9 @@ router.post("/recover", async (req, res) => {
 			message: "Email not registered.",
 		});
 	}
-	
+
 	const email = account.email;
-	
+
 	// map some random id to email to keep track
 	const randomID = crypto.randomBytes(16).toString("hex");
 	resets.set(randomID, email);
@@ -139,25 +139,26 @@ Peerwatch Team`,
 
 router.post("/authreset", (req, res) => {
 	// change the errors when want to test what went wrong
-	console.log("test");
+	console.log("AUTHRESET CALLED");
+
 	const randomID = req.body.rid;
 	if (randomID === null) {
 		// no random id
 		console.log("randomID not given");
 
 		return res.status(401).json({
-			message: "Reset ID invalid."
+			message: "Reset ID invalid.",
 		});
 	}
 
 	// get email from mapped random ID
 	var email = resets.get(randomID);
-	if (typeof email === 'undefined') {
+	if (typeof email === "undefined") {
 		// somehow email not mapped or invalid
 		console.log("email not mapped");
 
 		return res.status(401).json({
-			message: "Reset ID invalid."
+			message: "Reset ID invalid.",
 		});
 	}
 
@@ -168,7 +169,7 @@ router.post("/authreset", (req, res) => {
 		console.log("resetToken not given");
 
 		return res.status(401).json({
-			message: "Reset Token invalid."
+			message: "Reset Token invalid.",
 		});
 	}
 
@@ -187,9 +188,9 @@ router.post("/authreset", (req, res) => {
 		console.log("Account somehow not found");
 
 		return res.status(401).json({
-			message: "Invalid email."
+			message: "Invalid email.",
 		});
-	}	
+	}
 
 	// check if token invalid or expired.
 	jwt.verify(resetToken, oldPassword, (err, account) => {
@@ -198,13 +199,15 @@ router.post("/authreset", (req, res) => {
 			console.log("token invalid or expired");
 
 			return res.status(401).json({
-				message: "Invalid link."
+				message: "Invalid link.",
+			});
+		} else {
+			console.log("token verified");
+
+			return res.status(200).json({
+				message: "Reset token verified.",
 			});
 		}
-	});
-		
-	return res.status(200).json({
-		message: "Reset token verified."
 	});
 });
 
@@ -231,7 +234,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 				message: "Reset ID invalid.",
 			});
 		}
-		
+
 		// if password has validation error
 		const errors = await validationResult(req);
 		if (!errors.isEmpty()) {
@@ -249,19 +252,19 @@ router.put("/reset", resetValidation, async (req, res) => {
 				idx = i;
 			}
 		}
-		
+
 		if (idx === -1) {
 			return res.status(401).json({
-				message: "Invalid email."
+				message: "Invalid email.",
 			});
 		}
-		
+
 		// delete mapping since able to reset
 		resets.delete(randomID);
 
 		console.log("Password resetted");
 		return res.status(200).json({
-			message: "Password resetted successfully."
+			message: "Password resetted successfully.",
 		});
 	} catch (err) {
 		console.log("something went wrong in reset");
