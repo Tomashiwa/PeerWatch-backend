@@ -139,8 +139,6 @@ Peerwatch Team`,
 
 router.post("/authreset", (req, res) => {
 	// change the errors when want to test what went wrong
-	console.log("AUTHRESET CALLED");
-
 	const randomID = req.body.rid;
 	if (randomID === null) {
 		// no random id
@@ -246,7 +244,6 @@ router.put("/reset", resetValidation, async (req, res) => {
 		let idx = -1;
 		const newPassword = await bcrypt.hash(req.body.password, 10);
 		for (let i = 0; i < accounts.length; i++) {
-			console.log(accounts[i].email);
 			if (accounts[i].email === email) {
 				accounts[i].password = newPassword;
 				idx = i;
