@@ -1,21 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { Switch, Route, BrowserRouter as Router } from "react-router-dom";
+import React, { Suspense, useEffect, useState } from "react";
+import { BrowserRouter as Router } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 import { theme } from "./styles/theme";
+import { CircularProgress } from "@mui/material";
 import UserContext from "./components/Context/UserContext";
 import axios from "axios";
 
-import Landing from "./pages/Landing/Landing";
-import Room from "./pages/Room/Room";
 import NavBar from "./components/NavBar/NavBar";
 import AppWrapper from "./App.styled";
-import PleaseLogin from "./pages/PleaseLogin/PleaseLogin";
-import Loading from "./pages/Loading/Loading";
-import RoomAlreadyIn from "./pages/Room/RoomAlreadyIn";
-import RoomFull from "./pages/Room/RoomFull";
-import RoomNotFound from "./pages/Room/RoomNotFound";
-import NotFound from "./pages/NotFound/NotFound";
-import AccountReset from "./pages/AccountReset/AccountReset";
+import Routes from "./services/Routes";
+
+const SuspenseSpinner = (
+	<div className="center-screen stretch-height">
+		<CircularProgress color="warning" />
+	</div>
+);
 
 function App() {
 	const [userInfo, setUserInfo] = useState({
@@ -66,36 +65,9 @@ function App() {
 							<NavBar />
 						</div>
 						<div className="app-content">
-							<Switch>
-								<Route path="/reset/:rid/:resetToken">
-									<AccountReset />
-								</Route>
-								<Route path="/room/:id/alreadyin">
-									<RoomAlreadyIn />
-								</Route>
-								<Route path="/room/:id/full">
-									<RoomFull />
-								</Route>
-								<Route path="/room/:id">
-									{(!userInfo ||
-										(userInfo &&
-											userInfo.isLoaded &&
-											userInfo.token === undefined)) && <PleaseLogin />}
-									{userInfo &&
-										userInfo.isLoaded &&
-										userInfo.token !== undefined && <Room />}
-									{userInfo && !userInfo.isLoaded && <Loading />}
-								</Route>
-								<Route exact path="/room_notfound">
-									<RoomNotFound />
-								</Route>
-								<Route exact path="/">
-									<Landing />
-								</Route>
-								<Route path="*">
-									<NotFound />
-								</Route>
-							</Switch>
+							<Suspense fallback={SuspenseSpinner}>
+								<Routes />
+							</Suspense>
 						</div>
 					</AppWrapper>
 				</UserContext.Provider>

@@ -18,34 +18,6 @@ const debounce = (func, duration) => {
 	};
 };
 
-// temp commented out to remove warnings
-/*
-const throttleSetState = (setState, delay) => {
-	let throttleTimeout = null;
-	let storedState = null;
-
-	const throttledSetState = (state) => {
-		storedState = state;
-		const shouldSetState = !throttleTimeout;
-		if (shouldSetState) {
-			setState(state);
-
-			storedState = null;
-
-			throttleTimeout = setTimeout(() => {
-				throttleTimeout = null;
-
-				if (storedState) {
-					throttleSetState(storedState);
-				}
-			}, delay);
-		}
-	};
-
-	return throttledSetState;
-};
-*/
-
 function VideoPlayer({
 	socket,
 	roomId,
