@@ -105,8 +105,10 @@ router.post("/join", (req, res) => {
 		userId: userId,
 		roomId: roomId,
 	};
+
 	const countCapacitySql =
 		"SELECT count(*) as count, (SELECT capacity FROM rooms WHERE rooms.roomId = ?) as capacity FROM users_in_rooms WHERE users_in_rooms.roomId = ?";
+
 	db.query(countCapacitySql, [roomId, roomId], (countCapacityErr, countCapacityRes) => {
 		if (countCapacityErr) {
 			return res.status(500).json({ message: countCapacityErr.message });
@@ -126,8 +128,9 @@ router.post("/join", (req, res) => {
 				if (usersErr) {
 					return res.status(500).json({ message: usersErr.message });
 				}
+
 				console.log(usersRes);
-				res.status(200).json(usersRes);
+				return res.status(200).json(usersRes);
 			});
 		});
 	});
