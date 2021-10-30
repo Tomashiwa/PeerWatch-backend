@@ -142,7 +142,7 @@ router.put("/settings", (req, res) => {
 	let sql = "";
 	for (let i = 0; i < users.length; i++) {
 	    sql += "UPDATE users_in_rooms SET urlPermission = ?, chatPermission = ? WHERE userId = ? AND roomId = ?;";
-	    args.push(users[i].canVideo, users[i].canChat, users[i].userId, roomId);
+	    args.push(users[i].urlPermission, users[i].chatPermission, users[i].userId, roomId);
 	}
 	db.query(sql, args, (derr, dres) => {
 	    if (derr) {
