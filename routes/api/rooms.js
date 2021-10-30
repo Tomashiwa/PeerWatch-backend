@@ -161,7 +161,8 @@ router.get("/:roomId/count", (req, res) => {
 
 router.get("/:roomId/users", (req, res) => {
 	const { userId, roomId } = req.params;
-	const sql = "SELECT * FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
+	const sql = "SELECT users_in_rooms.userId, users.displayName, users_in_rooms.urlPermission, users_in_rooms.chatPermission" +
+	" FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
 	db.query(sql, [roomId], (derr, dres) => {
 		if (derr) {
 			return res.status(500).json({ message: derr.message });
