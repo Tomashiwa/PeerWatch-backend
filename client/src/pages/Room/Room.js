@@ -12,7 +12,7 @@ import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import Watchmates from "../../components/Watchmates/Watchmates";
 import UserContext from "../../components/Context/UserContext";
 import RoomDrawer from "../../components/RoomDrawer/RoomDrawer";
-import RoomPageWrapper from "./Room.styled";
+import { RoomPageWrapper, RoomContainerWrapper } from "./Room.styled";
 import TimeoutModal from "../../components/TimeoutModal/TimeoutModal";
 
 function Room() {
@@ -218,43 +218,45 @@ function Room() {
 
 	return (
 		<RoomPageWrapper>
-			<div className="room-player">
-				{isWaiting && (
-					<div className="room-join-fallback">
-						<CircularProgress color="warning" />
-						<Typography align="center" variant="h6">
-							Joining...
-						</Typography>
+			<RoomContainerWrapper isWaiting={isWaiting}>
+				<div className="room-player">
+					{isWaiting && (
+						<div className="room-join-fallback">
+							<CircularProgress color="warning" />
+							<Typography align="center" variant="h6">
+								Joining...
+							</Typography>
+						</div>
+					)}
+					<div className="room-res-wrapper">
+						<VideoPlayer
+							users={users}
+							user={user}
+							socket={videoSocket}
+							roomId={id}
+							isWaiting={isWaiting}
+							setIsWaiting={setIsWaiting}
+							roomInfo={roomInfo}
+							setRoomInfo={setRoomInfo}
+							finishCallback={openTimout}
+						/>
 					</div>
-				)}
-				<div className="room-res-wrapper">
-					<VideoPlayer
-						users={users}
-						user={user}
-						socket={videoSocket}
+				</div>
+				<div className="room-sidebar">
+					<VideoLinker isDisabled={isLinkerDisabled} linkCallback={linkCallback} />
+					<Watchmates users={users} />
+					<Chatbox socket={chatSocket} roomId={id} isDisabled={isChatDisabled} />
+					<RoomDrawer
 						roomId={id}
-						isWaiting={isWaiting}
-						setIsWaiting={setIsWaiting}
-						roomInfo={roomInfo}
-						setRoomInfo={setRoomInfo}
-						finishCallback={openTimout}
+						isHost={user.isHost}
+						capacity={roomInfo.capacity}
+						settings={settings}
+						kickCallback={kickCallback}
+						saveCallback={saveCallback}
 					/>
 				</div>
-			</div>
-			<div className="room-sidebar">
-				<VideoLinker isDisabled={isLinkerDisabled} linkCallback={linkCallback} />
-				<Watchmates users={users} />
-				<Chatbox socket={chatSocket} roomId={id} isDisabled={isChatDisabled} />
-				<RoomDrawer
-					roomId={id}
-					isHost={user.isHost}
-					capacity={roomInfo.capacity}
-					settings={settings}
-					kickCallback={kickCallback}
-					saveCallback={saveCallback}
-				/>
-			</div>
-			<TimeoutModal isOpen={isTimeoutPromptOpen} closeCallback={closeTimeout} />
+				<TimeoutModal isOpen={isTimeoutPromptOpen} closeCallback={closeTimeout} />
+			</RoomContainerWrapper>
 		</RoomPageWrapper>
 	);
 }

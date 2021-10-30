@@ -1,19 +1,45 @@
 import styled from "styled-components";
 
-const RoomPageWrapper = styled.div`
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-around;
-
+export const RoomPageWrapper = styled.div`
 	background: ${(props) => props.theme.lightGray};
-	height: 100%;
-	max-height: 100%;
+	min-height: 100%;
+	height: auto;
+
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+
+	@media (max-width: 1000px) {
+		height: 100%;
+		justify-content: center;
+		align-items: center;
+	}
+`;
+
+export const RoomContainerWrapper = styled.div`
+	width: 98%;
+	height: 75%;
+	max-height: 75%;
+
+	display: grid;
+	grid-template-rows: none;
+	grid-template-columns: 1fr auto;
+	grid-row-gap: 0em;
+	grid-column-gap: 1em;
+	align-items: center;
+	justify-content: space-evenly;
 
 	.room-player {
-		height: 80%;
-		width: 72.5%;
-
+		.room-res-wrapper {
+			position: relative;
+			${(props) => (!props.isWaiting ? "padding-top: 56.25%;" : "")}
+			.react-player {
+				position: absolute;
+				top: 0;
+				left: 0;
+			}
+		}
 		.room-join-fallback {
 			height: 100%;
 			width: 100%;
@@ -23,38 +49,37 @@ const RoomPageWrapper = styled.div`
 			align-items: center;
 			justify-content: center;
 		}
-
-		.room-res-wrapper {
-			position: relative;
-			padding-top: 56.25%;
-			.react-player {
-				position: absolute;
-				top: 0;
-				left: 0;
-			}
-		}
 	}
+
 	.room-sidebar {
-		height: 80%;
-		width: 22.5%;
+		height: 80vh;
 
-		display: flex;
-		flex-direction: column;
-		justify-content: space-around;
+		display: ${(props) => (props.isWaiting ? "none" : "grid")};
+		grid-template-rows: auto 4fr 8fr auto;
+		grid-row-gap: 1em;
 
-		.watchmates {
-			height: 25%;
-		}
+		min-height: 0;
+		min-width: 0;
 
 		.chatbox {
-			height: 50%;
+			overflow: hidden;
+			min-width: 0;
 		}
+	}
 
-		.sidebar-btn-container {
-			display: grid;
-			grid-template-columns: 3fr 1fr;
+	@media (max-width: 1000px) {
+		height: 100%;
+		max-height: 100%;
+
+		grid-template-rows: auto 1fr;
+		grid-template-columns: none;
+		grid-row-gap: 1em;
+		grid-column-gap: 0em;
+		align-items: flex-start;
+		justify-content: normal;
+
+		.room-sidebar {
+			height: 100%;
 		}
 	}
 `;
-
-export default RoomPageWrapper;

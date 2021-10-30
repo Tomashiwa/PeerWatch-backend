@@ -23,8 +23,8 @@ function RoomDrawer({ roomId, isHost, capacity, settings, kickCallback, saveCall
 
 	return (
 		<RoomDrawerWrapper isHost={isHost}>
-			<ButtonWrapper onClick={copyCode}>Share via code</ButtonWrapper>
-			<ButtonWrapper onClick={copyLink}>Share via link</ButtonWrapper>
+			<ButtonWrapper onClick={copyCode}>Share code</ButtonWrapper>
+			<ButtonWrapper onClick={copyLink}>Share link</ButtonWrapper>
 			{isHost && (
 				<RoomSettings
 					roomId={roomId}
