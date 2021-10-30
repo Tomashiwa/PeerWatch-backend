@@ -11,31 +11,6 @@ require("dotenv").config();
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-// Delete when done integrating recover and reset with DB
-const accounts = [
-	{
-		userId: 1,
-		email: "random@outlook.com",
-		displayName: "random",
-		password: "random",
-		isGoogle: false,
-	},
-	{
-		userId: 2,
-		email: "cs3219test@outlook.com",
-		displayName: "cs3219",
-		password: "$10$Q3vJw6t1PFQS6tQQxCjWguKs4.qFSyBeZ5ECyrTmUFcQfkLogVXMy",
-		isGoogle: false,
-	},
-	{
-		userId: 3,
-		email: "test@outlook.com",
-		displayName: "test",
-		password: "test",
-		isGoogle: false,
-	},
-];
-
 // Might wanna store this in db?
 const resets = new Map();
 
