@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { Suspense, useState, useEffect, useCallback, useContext } from "react";
 import { useHistory, useParams } from "react-router";
 import { io } from "socket.io-client";
 import { CircularProgress, Typography } from "@mui/material";
@@ -8,12 +8,13 @@ import URL from "../../util/url";
 
 import Chatbox from "../../components/ChatBox/Chatbox";
 import VideoLinker from "../../components/VideoLinker/VideoLinker";
-import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import Watchmates from "../../components/Watchmates/Watchmates";
 import UserContext from "../../components/Context/UserContext";
 import RoomDrawer from "../../components/RoomDrawer/RoomDrawer";
 import { RoomPageWrapper, RoomContainerWrapper } from "./Room.styled";
 import TimeoutModal from "../../components/TimeoutModal/TimeoutModal";
+
+const VideoPlayer = React.lazy(() => import("../../components/VideoPlayer/VideoPlayer"));
 
 function Room() {
 	const { id } = useParams();
@@ -229,17 +230,19 @@ function Room() {
 						</div>
 					)}
 					<div className="room-res-wrapper">
-						<VideoPlayer
-							users={users}
-							user={user}
-							socket={videoSocket}
-							roomId={id}
-							isWaiting={isWaiting}
-							setIsWaiting={setIsWaiting}
-							roomInfo={roomInfo}
-							setRoomInfo={setRoomInfo}
-							finishCallback={openTimout}
-						/>
+						<Suspense fallback={<CircularProgress color="warning" />}>
+							<VideoPlayer
+								users={users}
+								user={user}
+								socket={videoSocket}
+								roomId={id}
+								isWaiting={isWaiting}
+								setIsWaiting={setIsWaiting}
+								roomInfo={roomInfo}
+								setRoomInfo={setRoomInfo}
+								finishCallback={openTimout}
+							/>
+						</Suspense>
 					</div>
 				</div>
 				<div className="room-sidebar">
