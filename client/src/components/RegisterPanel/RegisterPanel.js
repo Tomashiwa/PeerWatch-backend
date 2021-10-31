@@ -102,6 +102,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					</p>
 				)}
 				<TextFieldWrapper
+					id="textfield-register-name"
 					required
 					error={displayNameFlag}
 					inputRef={nameRef}
@@ -110,6 +111,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					helperText={displayNameFlag ? DISPLAY_NAME_ERROR_MSG : ""}
 				/>
 				<TextFieldWrapper
+					id="textfield-register-email"
 					required
 					error={emailFlag}
 					inputRef={emailRef}
@@ -118,6 +120,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					helperText={emailFlag ? emailError : ""}
 				/>
 				<TextFieldWrapper
+					id="textfield-register-pass"
 					required
 					error={passwordFlag}
 					inputRef={passRef}
@@ -127,6 +130,7 @@ function RegisterPanel({ successCallback, cancelCallback }) {
 					helperText={passwordFlag ? PASSWORD_ERROR_MSG : ""}
 				/>
 				<TextFieldWrapper
+					id="textfield-register-pass-again"
 					required
 					error={passwordAgainFlag}
 					inputRef={passAgainRef}

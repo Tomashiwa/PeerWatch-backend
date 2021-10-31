@@ -75,6 +75,7 @@ function RoomSettings({ roomId, capacity, users, kickCallback, saveCallback }) {
 					<div className="settings-capacity">
 						<Typography className="capacity-text">Capacity:</Typography>
 						<TextField
+							id="textfield-settings-capacity"
 							className="capacity-input"
 							type="number"
 							size="small"

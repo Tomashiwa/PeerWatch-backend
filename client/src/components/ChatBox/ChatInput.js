@@ -16,6 +16,7 @@ function ChatInput({ isDisabled = false, onSubmit }) {
 		<form onSubmit={submitMsg}>
 			<ChatInputWrapper>
 				<TextFieldWrapper
+					id="textfield-chat-input"
 					disabled={isDisabled}
 					data-cy="chat-input"
 					className="chatinput-textfield"

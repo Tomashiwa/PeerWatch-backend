@@ -36,7 +36,8 @@ function AccountResetPanel() {
 
 	useEffect(() => {
 		const config = { headers: { Authorization: `Bearer ${resetToken}` } };
-		axios.post("/api/auth/authreset", { rid: rid }, config)
+		axios
+			.post("/api/auth/authreset", { rid: rid }, config)
 			.then((res) => {
 				console.log(res.data.message);
 			})
@@ -62,14 +63,15 @@ function AccountResetPanel() {
 
 		resetErrors();
 
-		axios.put("/api/auth/reset", {
+		axios
+			.put("/api/auth/reset", {
 				rid: rid,
 				password: newPassRef.current.value,
-				repeatedPassword: repeatPassRef.current.value
+				repeatedPassword: repeatPassRef.current.value,
 			})
 			.then((res) => {
 				console.log(res.data.message);
-					
+
 				returnHome();
 			})
 			.catch((err) => {
@@ -114,12 +116,9 @@ function AccountResetPanel() {
 						team for assistance.
 					</p>
 				)}
-				{unauthFlag && (
-					<p style={{ color: "red" }}>
-						{unauthError}
-					</p>
-				)}
+				{unauthFlag && <p style={{ color: "red" }}>{unauthError}</p>}
 				<TextFieldWrapper
+					id="textfield-reset-pass"
 					required
 					error={passwordFlag}
 					inputRef={newPassRef}
@@ -129,6 +128,7 @@ function AccountResetPanel() {
 					helperText={passwordFlag ? PASSWORD_ERROR_MSG : ""}
 				/>
 				<TextFieldWrapper
+					id="textfield-reset-pass-again"
 					required
 					error={repeatPassFlag}
 					inputRef={repeatPassRef}

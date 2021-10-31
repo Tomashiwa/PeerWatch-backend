@@ -55,6 +55,7 @@ function JoinRoomPanel() {
 		<Panel>
 			<Typography variant="h5">Jump in with your friends!</Typography>
 			<TextFieldWrapper
+				id="textfield-join-code"
 				placeholder="Enter room code here..."
 				inputRef={inputRef}
 				error={hasError}

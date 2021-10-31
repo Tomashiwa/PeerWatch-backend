@@ -16,36 +16,37 @@ function RecoveryPanel({ sendCallback, cancelCallback }) {
 	const [unauthFlag, setUnauthFlag] = useState(false);
 	const [unauthError, setUnauthError] = useState("");
 	const [generalFlag, setGeneralFlag] = useState(false);
-	
+
 	const resetErrors = () => {
 		setGeneralFlag(false);
 		setUnauthFlag(false);
 	};
-	
+
 	const send = (e) => {
 		e.preventDefault();
-		
+
 		resetErrors();
-		
-		axios.post("/api/auth/recover", {
-					email: emailRef.current.value
-				})
-				.then((res) => {
-					console.log(res.data.message);
-					
-					console.log(`Sent recovery email to ${emailRef.current.value}`);
-					sendCallback();
-				})
-				.catch((err) => {
-					if (err.response) {
-						if (err.response.status === UNAUTH_ERROR_CODE) {
-							setUnauthFlag(true);
-							setUnauthError(err.response.data.message);
-						} else {
-							setGeneralFlag(true);
-						}
+
+		axios
+			.post("/api/auth/recover", {
+				email: emailRef.current.value,
+			})
+			.then((res) => {
+				console.log(res.data.message);
+
+				console.log(`Sent recovery email to ${emailRef.current.value}`);
+				sendCallback();
+			})
+			.catch((err) => {
+				if (err.response) {
+					if (err.response.status === UNAUTH_ERROR_CODE) {
+						setUnauthFlag(true);
+						setUnauthError(err.response.data.message);
+					} else {
+						setGeneralFlag(true);
 					}
-				});
+				}
+			});
 	};
 
 	return (
@@ -56,13 +57,14 @@ function RecoveryPanel({ sendCallback, cancelCallback }) {
 				you a link to reset your password!
 			</Typography>
 			{generalFlag && (
-					<p style={{ color: "red" }}>
-						Error when sending email to your email address. Please ask the PeerWatch team for
-						assistance.
-					</p>
+				<p style={{ color: "red" }}>
+					Error when sending email to your email address. Please ask the PeerWatch team
+					for assistance.
+				</p>
 			)}
 			<FormWrapper onSubmit={send}>
 				<TextFieldWrapper
+					id="textfield-recovery-email"
 					required
 					error={unauthFlag}
 					inputRef={emailRef}

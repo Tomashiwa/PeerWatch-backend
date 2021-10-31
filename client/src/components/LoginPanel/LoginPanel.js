@@ -58,12 +58,14 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 				{generalFlag && <p style={{ color: "red" }}> {generalError} </p>}
 
 				<TextFieldWrapper
+					id="textfield-login-email"
 					required
 					inputRef={emailRef}
 					variant="filled"
 					label="Email address"
 				/>
 				<TextFieldWrapper
+					id="textfield-login-pass"
 					required
 					inputRef={passRef}
 					variant="filled"

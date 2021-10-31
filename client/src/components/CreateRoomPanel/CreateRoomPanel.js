@@ -12,7 +12,6 @@ function CreateRoomPanel() {
 	const history = useHistory();
 
 	const create = () => {
-		// const PLACEHOLDER_USER_ID = 10;
 		const roomId = uuidv4();
 
 		const newRoom = {
