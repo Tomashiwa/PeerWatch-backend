@@ -15,7 +15,7 @@ const disconnectUser = (socketId, userId, roomId) => {
 	const sql = "DELETE FROM users_in_rooms WHERE roomId = ? AND userId = ?";
 	db.query(sql, [roomId, userId], (derr, dres) => {
 		if (derr) {
-			return res.status(500).json({ message: derr.message });
+			console.log(derr);
 		}
 		if (dres.affectedRows == 0) {
 			console.log("Room or user does not exist");
