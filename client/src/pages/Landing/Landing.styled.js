@@ -1,10 +1,14 @@
 import styled from "styled-components";
 
 const LandingPageWrapper = styled.div`
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
+	// display: flex;
+	// flex-direction: column;
+	// align-items: center;
+	// justify-content: center;
+
+	display: grid;
+	grid-template-columns: auto;
+	place-items: center;
 
 	background: ${(props) => props.theme.lightGray};
 	height: 100%;
@@ -15,6 +19,8 @@ const LandingPageWrapper = styled.div`
 	}
 
 	.landing-room-center {
+		align-self: end;
+
 		width: 50%;
 
 		display: grid;
@@ -35,6 +41,8 @@ const LandingPageWrapper = styled.div`
 	}
 
 	.landing-room-bottom {
+		align-self: start;
+
 		width: 60%;
 		padding-top: 20px;
 
