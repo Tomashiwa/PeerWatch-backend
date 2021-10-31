@@ -12,6 +12,7 @@ import {
 
 const CREDENTIALS_ERROR_CODE = 422;
 const UNAUTH_ERROR_CODE = 401;
+const PASSWORD_ERROR_MSG = "Password must contain at least 8 characters, numbers, and letters.";
 const REPEAT_PASSWORD_ERROR_MSG = "Please enter the same password.";
 
 function AccountResetPanel() {
@@ -19,7 +20,6 @@ function AccountResetPanel() {
 	const newPassRef = useRef(null);
 	const repeatPassRef = useRef(null);
 	const [passwordFlag, setPasswordFlag] = useState(false);
-	const [passwordError, setPasswordError] = useState("");
 	const [repeatPassFlag, setRepeatPassFlag] = useState(false);
 	const [unauthFlag, setUnauthFlag] = useState(false);
 	const [unauthError, setUnauthError] = useState("");
@@ -36,8 +36,7 @@ function AccountResetPanel() {
 
 	useEffect(() => {
 		const config = { headers: { Authorization: `Bearer ${resetToken}` } };
-		axios
-			.post("/api/auth/authreset", { rid: rid }, config)
+		axios.post("/api/auth/authreset", { rid: rid }, config)
 			.then((res) => {
 				console.log(res.data.message);
 			})
@@ -62,41 +61,39 @@ function AccountResetPanel() {
 		);
 
 		resetErrors();
-		if (newPassRef.current.value === repeatPassRef.current.value) {
-			axios
-				.put("/api/auth/reset", {
-					rid: rid,
-					password: newPassRef.current.value,
-				})
-				.then((res) => {
-					console.log(res.data.message);
 
-					returnHome();
-				})
-				.catch((err) => {
-					if (err.response) {
-						if (err.response.status === CREDENTIALS_ERROR_CODE) {
-							const errData = err.response.data.errors;
-							let passErrMsgSet = false;
-							for (let i = 0; i < errData.length; i++) {
-								if (!passErrMsgSet) {
-									// take only first password error message
-									passErrMsgSet = true;
-									setPasswordFlag(true);
-									setPasswordError(errData[i].msg);
-								}
+		axios.put("/api/auth/reset", {
+				rid: rid,
+				password: newPassRef.current.value,
+				repeatedPassword: repeatPassRef.current.value
+			})
+			.then((res) => {
+				console.log(res.data.message);
+					
+				returnHome();
+			})
+			.catch((err) => {
+				if (err.response) {
+					if (err.response.status === CREDENTIALS_ERROR_CODE) {
+						const errData = err.response.data.errors;
+						let passErrMsgSet = false;
+						for (let i = 0; i < errData.length; i++) {
+							if (errData[i].param === "repeatedPassword") {
+								setRepeatPassFlag(true);
+							} else if (errData[i].param === "password" && !passErrMsgSet) {
+								// take only first password error message
+								passErrMsgSet = true;
+								setPasswordFlag(true);
 							}
-						} else if (err.response.status === UNAUTH_ERROR_CODE) {
-							setUnauthFlag(true);
-							setUnauthError(err.response.data.message);
-						} else {
-							setGeneralFlag(true);
 						}
+					} else if (err.response.status === UNAUTH_ERROR_CODE) {
+						setUnauthFlag(true);
+						setUnauthError(err.response.data.message);
+					} else {
+						setGeneralFlag(true);
 					}
-				});
-		} else {
-			setRepeatPassFlag(true);
-		}
+				}
+			});
 	};
 
 	const returnHome = () => {
@@ -117,7 +114,11 @@ function AccountResetPanel() {
 						team for assistance.
 					</p>
 				)}
-				{unauthFlag && <p style={{ color: "red" }}>{unauthError}</p>}
+				{unauthFlag && (
+					<p style={{ color: "red" }}>
+						{unauthError}
+					</p>
+				)}
 				<TextFieldWrapper
 					required
 					error={passwordFlag}
@@ -125,7 +126,7 @@ function AccountResetPanel() {
 					variant="filled"
 					label="New password"
 					type="password"
-					helperText={passwordFlag ? passwordError : ""}
+					helperText={passwordFlag ? PASSWORD_ERROR_MSG : ""}
 				/>
 				<TextFieldWrapper
 					required

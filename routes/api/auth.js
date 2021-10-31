@@ -11,31 +11,51 @@ require("dotenv").config();
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-const resets = new Map();
+const resetIDEmailMap = new Map();
+const emailResetIDMap = new Map();
 const endpoint = process.env.NODE_ENV === "production" ? "http://54.179.111.98:5000/" : "http://localhost:3000/";
 
-var registerValidation = [
+const checkEmailExist = (email) => {
+		const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+		return new Promise((resolve, reject) => {
+			db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+				if (selectUserRes != null && selectUserRes.length != 0) {
+					console.log("Email already exists");
+					reject(false);
+				}
+				console.log("Can use email for registration");
+				resolve(true);
+			});
+		});
+}
+
+const checkRepeatedPassword = (repeatedPassword, req) => {
+	if (repeatedPassword !== req.body.password) {
+		console.log("repeated password not same");
+		return false;
+	}
+	return true;
+}
+
+const registerValidation = [
 	check("email", "Email must be of valid email format.").isEmail(),
+	check("email", "Email already exists.").custom(value => checkEmailExist(value)),
 	check("displayName")
 		.isLength({ min: 1 })
-		.withMessage("Display Name must be at least 1 character."),
-	check("password")
+		.withMessage("Display Name must contain at least 1 character."),
+	check("password", "Password must contain at least 8 characters, numbers, and letters.")
 		.isLength({ min: 8 })
-		.withMessage("Password must be at least 8 characters.")
 		.matches("[0-9]")
-		.withMessage("Password must contain numbers.")
-		.matches("[A-z]")
-		.withMessage("Password must contain letters."),
+		.matches("[A-z]"),
+	check("repeatedPassword", "Please enter the same password.").custom((value, {req}) => checkRepeatedPassword(value, req))
 ];
 
-var resetValidation = [
-	check("password")
+const resetValidation = [
+	check("password", "Password must contain at least 8 characters, numbers, and letters.")
 		.isLength({ min: 8 })
-		.withMessage("Password must be at least 8 characters.")
 		.matches("[0-9]")
-		.withMessage("Password must contain numbers.")
-		.matches("[A-z]")
-		.withMessage("Password must contain letters."),
+		.matches("[A-z]"),
+	check("repeatedPassword", "Please enter the same password.").custom((value, {req}) => checkRepeatedPassword(value, req))
 ];
 
 router.post("/recover", async (req, res) => {
@@ -50,10 +70,15 @@ router.post("/recover", async (req, res) => {
 		}
         const email = selectUserRes[0].email;
 
-        // map some random id to email to keep track
-        const randomID = crypto.randomBytes(16).toString("hex");
-        resets.set(randomID, email);
-        console.log(`random ID mapped to email: ${randomID}`);
+		// Check if password reset request for email already exists.
+		let resetID = emailResetIDMap.get(email);
+		if (typeof existingResetID === "undefined") {
+			// map some random id to email to keep track
+			resetID = crypto.randomBytes(16).toString("hex");
+			resetIDEmailMap.set(resetID, email);
+			emailResetIDMap.set(email, resetID);
+			console.log(`random ID mapped to email: ${resetID}`);
+		}
 
         // use hashed password as secret.
         const password = selectUserRes[0].password;
@@ -61,15 +86,13 @@ router.post("/recover", async (req, res) => {
         const resetToken = jwt.sign({ email: email }, password, { expiresIn: "15m" });
         console.log(`signed reset token: ${resetToken}`);
 
-        // Need change the link later.
-        const link = endpoint + "reset/" + randomID + "/" + resetToken;
+        const link = endpoint + "reset/" + resetID + "/" + resetToken;
         console.log(`link: ${link}`);
 
         //send email
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-                // The credentials posted in group chat
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
@@ -77,7 +100,6 @@ router.post("/recover", async (req, res) => {
 
         const message = {
             from: "PeerWatch Team <peerwatchteam@gmail.com>",
-            // Can change to some disposable email to test
             to: email,
             subject: "PeerWatch Account Password Reset",
             text: `Dear User,
@@ -102,7 +124,6 @@ Peerwatch Team`,
             console.log(body);
         });
 
-        // remove message after testing
         return res.status(200).json({
             message: "Email sent"
         });
@@ -110,11 +131,10 @@ Peerwatch Team`,
 });
 
 router.post("/authreset", (req, res) => {
-	// change the errors when want to test what went wrong
-	const randomID = req.body.rid;
-	if (randomID === null) {
-		// no random id
-		console.log("randomID not given");
+	const resetID = req.body.rid;
+	if (resetID === null) {
+		// no random id provided
+		console.log("resetID not given");
 
 		return res.status(401).json({
 			message: "Reset ID invalid.",
@@ -122,7 +142,7 @@ router.post("/authreset", (req, res) => {
 	}
 
 	// get email from mapped random ID
-	var email = resets.get(randomID);
+	const email = resetIDEmailMap.get(resetID);
 	if (typeof email === "undefined") {
 		// somehow email not mapped or invalid
 		console.log("email not mapped");
@@ -143,10 +163,7 @@ router.post("/authreset", (req, res) => {
 		});
 	}
 
-	// get password from accounts list
 	// Use email to find account's old password from DB to verify jwt token
-	let oldPassword = null;
-	let idx = -1;
     const selectUserSQl = "SELECT * FROM users WHERE email = ?";
 	db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
 		if (selectUserRes == null || selectUserRes.length == 0) {
@@ -155,7 +172,7 @@ router.post("/authreset", (req, res) => {
 			message: "Invalid email.",
 			});
 		}
-        oldPassword = selectUserRes[0].password;
+        const oldPassword = selectUserRes[0].password;
         // check if token invalid or expired.
         jwt.verify(resetToken, oldPassword, (err, account) => {
             if (err) {
@@ -178,11 +195,10 @@ router.post("/authreset", (req, res) => {
 
 router.put("/reset", resetValidation, async (req, res) => {
 	try {
-		// change the errors when want to test what went wrong
-		const randomID = req.body.rid;
-		if (randomID === null) {
+		const resetID = req.body.rid;
+		if (resetID === null) {
 			// no random id
-			console.log("randomID not given");
+			console.log("resetID not given");
 
 			return res.status(401).json({
 				message: "Reset ID invalid.",
@@ -190,7 +206,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 		}
 
 		// get email from mapped random ID
-		var email = resets.get(randomID);
+		const email = resetIDEmailMap.get(resetID);
 		if (typeof email === undefined) {
 			// somehow email not mapped or invalid
 			console.log("email not mapped");
@@ -208,7 +224,6 @@ router.put("/reset", resetValidation, async (req, res) => {
 
 		// Set new password
 		// if email somehow does not exist, then return error.
-		let idx = -1;
 		const newPassword = await bcrypt.hash(req.body.password, 10);
         const updatePasswordSQL = "UPDATE users SET password = ? WHERE email = ?";
 		db.query(updatePasswordSQL, [newPassword, email], (updatePasswordErr, updatePasswordRes) => {
@@ -217,8 +232,10 @@ router.put("/reset", resetValidation, async (req, res) => {
                     message: "Invalid email.",
                 });
 		    }
+			
 		    // delete mapping since able to reset
-            resets.delete(randomID);
+            resetIDEmailMap.delete(resetID);
+			emailResetIDMap.delete(email);
             console.log("Password resetted");
             return res.status(200).json({
                 message: "Password resetted successfully.",
@@ -235,7 +252,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 router.post("/register", registerValidation, async (req, res) => {
 	try {
 		// if account credentials has validation errors
-		const errors = validationResult(req);
+		const errors = await validationResult(req);
 		if (!errors.isEmpty()) {
 			return res.status(422).json({ errors: errors.array() });
 		}
@@ -243,41 +260,31 @@ router.post("/register", registerValidation, async (req, res) => {
 		const email = req.body.email;
 		const password = await bcrypt.hash(req.body.password, 10);
 
-		// check if email already exists
-		const selectUserSQl = "SELECT * FROM users WHERE email = ?";
-		db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
-			if (selectUserRes != null && selectUserRes.length != 0) {
-				console.log("email already exists");
-				return res.status(409).json({
-					message: "Email already exists.",
-				});
+		// Create and add account
+		const newUser = {
+			email: email,
+			displayName: req.body.displayName,
+			password: password,
+			isGoogle: false,
+		};
+		
+		const insertUserSQL = "INSERT INTO users SET ?";
+		db.query(insertUserSQL, newUser, (insertUserErr, insertUserRes) => {
+			if (insertUserErr) {
+				return res.status(500).send(insertUserErr);
 			}
+			newUser.userId = insertUserRes.insertId;
 
-			// Create and add account
-			let newUser = {
-				email: email,
-				displayName: req.body.displayName,
-				password: password,
-				isGoogle: false,
-			};
-			const insertUserSQL = "INSERT INTO users SET ?";
-			db.query(insertUserSQL, newUser, (insertUserErr, insertUserRes) => {
-				if (insertUserErr) {
-					return res.status(500).send(insertUserErr);
-				}
-				newUser.userId = insertUserRes.insertId;
-
-				const accessToken = jwt.sign(newUser, process.env.ACCESS_SECRET, {
-					expiresIn: "30 days",
-				});
-				console.log("Account created");
-				res.status(201).json({
-					message: "Account registered.",
-					token: accessToken,
-					userId: newUser.userId,
-					displayName: newUser.displayName,
-					email: newUser.email,
-				});
+			const accessToken = jwt.sign(newUser, process.env.ACCESS_SECRET, {
+				expiresIn: "30 days",
+			});
+			console.log("Account created");
+			return res.status(201).json({
+				message: "Account registered.",
+				token: accessToken,
+				userId: newUser.userId,
+				displayName: newUser.displayName,
+				email: newUser.email,
 			});
 		});
 	} catch (err) {

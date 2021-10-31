@@ -8,10 +8,10 @@ if (env_var.error) {
 }
 
 const pool = mysql.createPool({
-	host: process.env.DB_HOST,
-	port: process.env.DB_PORT,
-	user: process.env.DB_USER,
-	password: process.env.DB_PASS,
+	host: process.env.NODE_ENV === "production" ? process.env.DB_HOST : process.env.LOCAL_DB_HOST,
+	port: process.env.NODE_ENV === "production" ? process.env.DB_PORT : process.env.LOCAL_DB_PORT,
+	user: process.env.NODE_ENV === "production" ? process.env.DB_USER : process.env.LOCAL_DB_USER,
+	password: process.env.NODE_ENV === "production" ? process.env.DB_PASS : process.env.LOCAL_DB_PASS,
 	database: "peerwatch",
 	multipleStatements: true,
 	connectionLimit: 75,

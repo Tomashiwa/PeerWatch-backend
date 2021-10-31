@@ -30,6 +30,7 @@ export const ButtonContainerWrapper = styled.div`
 `;
 
 export const TextFieldWrapper = mStyled(TextField)({
+	width: "80%",
 	".MuiFilledInput-input, .MuiFilledInput-input:hover": {
 		background: theme.white,
 		borderRadius: "2px",
