@@ -4,9 +4,14 @@ import { ButtonWrapper, ContentWrapper, ModalWrapper } from "./RoomSettings.styl
 import RoomTable from "./RoomTable";
 import axios from "axios";
 
-function RoomSettings({ roomId, capacity, settings, kickCallback, saveCallback }) {
+const ROOM_CAPACITY = 15;
+const ERROR_MSG_EXCEED_RANGE = `Capacity must be from 1 to ${ROOM_CAPACITY}`;
+const ERROR_MSG_LOWER_THAN_EXISTING = `Cannot be lower than the number of users in room`;
+
+function RoomSettings({ roomId, capacity, users, kickCallback, saveCallback }) {
 	const [open, setOpen] = useState(false);
-	const [currSettings, setCurrSettings] = useState({});
+	const [currUsers, setCurrUsers] = useState({});
+	const [error, setError] = useState("");
 	const capacityRef = useRef(null);
 
 	const openModel = () => {
@@ -18,9 +23,17 @@ function RoomSettings({ roomId, capacity, settings, kickCallback, saveCallback }
 	};
 
 	const save = () => {
-		const newCapacity = capacityRef.current.value;
-
-		if (newCapacity || newCapacity.length > 0) {
+		const newCapacity = parseInt(capacityRef.current.value);
+		if (isNaN(newCapacity)) {
+			setError("");
+		} else if (newCapacity <= 0 || newCapacity > 15) {
+			setError(ERROR_MSG_EXCEED_RANGE);
+			return;
+		} else if (newCapacity < users.length) {
+			setError(ERROR_MSG_LOWER_THAN_EXISTING);
+			return;
+		} else {
+			setError("");
 			axios
 				.put("/api/rooms/capacity", { roomId, capacity: newCapacity })
 				.then((res) => {})
@@ -29,15 +42,25 @@ function RoomSettings({ roomId, capacity, settings, kickCallback, saveCallback }
 				});
 		}
 
-		// To-do: PUT settings to DB
+		const newSettings = {
+			roomId,
+			users: currUsers,
+		};
+		axios
+			.put("/api/rooms/settings", newSettings)
+			.then((res) => {
+				saveCallback(newCapacity, currUsers);
+			})
+			.catch((err) => {
+				console.log(err);
+			});
 
-		saveCallback(newCapacity, currSettings);
 		closeModal();
 	};
 
 	useEffect(() => {
-		setCurrSettings(settings);
-	}, [settings]);
+		setCurrUsers(users);
+	}, [users]);
 
 	return (
 		<>
@@ -45,24 +68,26 @@ function RoomSettings({ roomId, capacity, settings, kickCallback, saveCallback }
 				Settings
 			</ButtonWrapper>
 			<ModalWrapper open={open} onClose={closeModal}>
-				<ContentWrapper>
+				<ContentWrapper hasError={error.length > 0}>
 					<Typography className="settings-title" variant="h5">
 						Room settings
 					</Typography>
 					<div className="settings-capacity">
-						<Typography className="capacity-text">Max capacity (Up to 15):</Typography>
+						<Typography className="capacity-text">Capacity:</Typography>
 						<TextField
 							className="capacity-input"
 							type="number"
 							size="small"
 							placeholder={`${capacity}`}
 							inputRef={capacityRef}
+							error={error.length > 0}
 						/>
 					</div>
+					{error.length > 0 && <span className="capacity-error">{error}</span>}
 					<div className="settings-table">
 						<RoomTable
-							settings={currSettings}
-							setSettings={setCurrSettings}
+							users={currUsers}
+							setUsers={setCurrUsers}
 							kickCallback={kickCallback}
 						/>
 					</div>

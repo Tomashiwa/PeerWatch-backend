@@ -6,6 +6,7 @@ const AppWrapper = styled.div`
 
 	display: flex;
 	flex-direction: column;
+	background: ${(props) => props.theme.lightGray};
 
 	.app-navbar {
 		flex-grow: 0;

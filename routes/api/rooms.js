@@ -57,7 +57,7 @@ router.put("/url", (req, res) => {
 router.put("/capacity", (req, res) => {
 	const { roomId, capacity } = req.body;
 	if (capacity > 15 || capacity <= 0) {
-	    return res.status(500).json({ message: "Capacity is invalid" })
+		return res.status(500).json({ message: "Capacity is invalid" });
 	}
 	const sql = "UPDATE rooms SET capacity = ? WHERE roomId = ?";
 	db.query(sql, [capacity, roomId], (derr, dres) => {
@@ -144,22 +144,24 @@ router.put("/settings", (req, res) => {
 	let args = [];
 	let sql = "";
 	for (let i = 0; i < users.length; i++) {
-	    sql += "UPDATE users_in_rooms SET canVideo = ?, canChat = ? WHERE userId = ? AND roomId = ?;";
-	    args.push(users[i].canVideo, users[i].canChat, users[i].userId, roomId);
+		sql +=
+			"UPDATE users_in_rooms SET canVideo = ?, canChat = ? WHERE userId = ? AND roomId = ?;";
+		args.push(users[i].canVideo, users[i].canChat, users[i].userId, roomId);
 	}
 	db.query(sql, args, (derr, dres) => {
-	    if (derr) {
-	        return res.status(500).json({ message: derr.message });
-	    }
-        const selectSql = "SELECT users_in_rooms.userId, users.displayName, users_in_rooms.canVideo, users_in_rooms.canChat" +
-        " FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
-        db.query(selectSql, [roomId], (selectErr, selectRes) => {
-            if (derr) {
-                return res.status(500).json({ message: selectErr.message });
-            }
-            console.log(selectRes);
-            res.status(200).json(selectRes);
-        });
+		if (derr) {
+			return res.status(500).json({ message: derr.message });
+		}
+		const selectSql =
+			"SELECT users_in_rooms.userId, users.displayName, users_in_rooms.canVideo, users_in_rooms.canChat" +
+			" FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
+		db.query(selectSql, [roomId], (selectErr, selectRes) => {
+			if (derr) {
+				return res.status(500).json({ message: selectErr.message });
+			}
+			console.log(selectRes);
+			res.status(200).json(selectRes);
+		});
 	});
 });
 
@@ -181,8 +183,9 @@ router.get("/:roomId/count", (req, res) => {
 
 router.get("/:roomId/users", (req, res) => {
 	const { userId, roomId } = req.params;
-	const sql = "SELECT users_in_rooms.userId, users.displayName, users_in_rooms.canVideo, users_in_rooms.canChat" +
-	" FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
+	const sql =
+		"SELECT users_in_rooms.userId, users.displayName, users_in_rooms.canVideo, users_in_rooms.canChat" +
+		" FROM users_in_rooms INNER JOIN users ON users.userId = users_in_rooms.userId WHERE roomId = ?";
 	db.query(sql, [roomId], (derr, dres) => {
 		if (derr) {
 			return res.status(500).json({ message: derr.message });

@@ -20,7 +20,6 @@ function Room() {
 	const { id } = useParams();
 	const [user, setUser] = useState({});
 	const [users, setUsers] = useState([]);
-	const [settings, setSettings] = useState({});
 	const [isWaiting, setIsWaiting] = useState(true);
 	const [isLinkerDisabled, setIsLinkerDisabled] = useState(false);
 	const [isChatDisabled, setIsChatDisabled] = useState(false);
@@ -39,16 +38,24 @@ function Room() {
 
 	// Handle changing of room settings
 	const receiveSettings = useCallback(
-		(newCapacity, newSettings) => {
-			setRoomInfo({ ...roomInfo, newCapacity });
-			setSettings(newSettings);
+		(newCapacity, newUsers) => {
+			const newUser = newUsers.filter((u) => u.userId === userInfo.userId)[0];
+			setUser(newUser);
+			setUsers(newUsers);
+			if (!isNaN(newCapacity)) {
+				setRoomInfo({ ...roomInfo, newCapacity });
+			}
 		},
-		[roomInfo]
+		[roomInfo, userInfo]
 	);
-	const saveCallback = (newCapacity, newSettings) => {
-		setRoomInfo({ ...roomInfo, capacity: newCapacity });
-		setSettings(newSettings);
-		chatSocket.emit("SEND_ROOM_SETTINGS", id, newCapacity, newSettings);
+	const saveCallback = (newCapacity, newUsers) => {
+		const newUser = newUsers.filter((u) => u.userId === userInfo.userId)[0];
+		setUser(newUser);
+		setUsers(newUsers);
+		chatSocket.emit("SEND_ROOM_SETTINGS", id, newCapacity, newUsers);
+		if (!isNaN(newCapacity)) {
+			setRoomInfo({ ...roomInfo, capacity: newCapacity });
+		}
 	};
 
 	// Handle kicking of users
@@ -88,7 +95,8 @@ function Room() {
 
 		Promise.all([getUsers, getCapacityCount])
 			.then((res) => {
-				const userIds = res[0].data.map((entry) => entry.userId);
+				const usersFound = res[0].data;
+				const userIds = usersFound.map((entry) => entry.userId);
 				const { capacity, count } = res[1].data;
 
 				if (userIds.includes(userInfo.userId)) {
@@ -116,18 +124,7 @@ function Room() {
 							setChatSocket(newChatSocket);
 							setVideoSocket(newVideoSocket);
 
-							// TEMPORARY PLACEHOLDER
-							// To-do: GET settings from DB
-							setSettings({
-								users: joinRes.data.map((user) => {
-									return {
-										...user,
-										displayName: user.userId,
-										canChat: true,
-										canVideo: true,
-									};
-								}),
-							});
+							setUsers(usersFound);
 						})
 						.catch((err) => {
 							history.push("/room_notfound");
@@ -171,19 +168,6 @@ function Room() {
 						}
 					}
 					setUsers(newUsers);
-
-					// TEMPORARY PLACEHOLDER
-					// To-do: GET settings from DB
-					setSettings({
-						users: newUsers.map((user) => {
-							return {
-								...user,
-								displayName: user.userId,
-								canChat: true,
-								canVideo: true,
-							};
-						}),
-					});
 				})
 				.catch((err) => console.log(err));
 		},
@@ -206,31 +190,26 @@ function Room() {
 
 	// Enable/disable chatbox and linker based on settings
 	useEffect(() => {
-		if (settings && settings.users) {
-			const userSettings = settings.users.filter(
-				(user) => user.userId === userInfo.userId
-			)[0];
-			if (userSettings) {
-				setIsChatDisabled(!userSettings.canChat);
-				setIsLinkerDisabled(!userSettings.canVideo);
-			}
+		if (user) {
+			setIsChatDisabled(!user.canChat);
+			setIsLinkerDisabled(!user.canVideo);
 		}
-	}, [settings, userInfo]);
+	}, [user]);
 
 	return (
 		<RoomPageWrapper>
 			<RoomContainerWrapper isWaiting={isWaiting}>
 				<div className="room-player">
-					{isWaiting && (
-						<div className="room-join-fallback">
-							<CircularProgress color="warning" />
-							<Typography align="center" variant="h6">
-								Joining...
-							</Typography>
-						</div>
-					)}
 					<div className="room-res-wrapper">
-						<Suspense fallback={<CircularProgress color="warning" />}>
+						{isWaiting && (
+							<div className="room-join-fallback">
+								<CircularProgress color="warning" />
+								<Typography align="center" variant="h6">
+									Joining...
+								</Typography>
+							</div>
+						)}
+						<Suspense>
 							<VideoPlayer
 								users={users}
 								user={user}
@@ -253,7 +232,7 @@ function Room() {
 						roomId={id}
 						isHost={user.isHost}
 						capacity={roomInfo.capacity}
-						settings={settings}
+						users={users}
 						kickCallback={kickCallback}
 						saveCallback={saveCallback}
 					/>

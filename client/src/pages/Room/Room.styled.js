@@ -24,7 +24,7 @@ export const RoomContainerWrapper = styled.div`
 
 	display: grid;
 	grid-template-rows: none;
-	grid-template-columns: 1fr auto;
+	grid-template-columns: 3fr 1fr;
 	grid-row-gap: 0em;
 	grid-column-gap: 1em;
 	align-items: center;
@@ -33,33 +33,41 @@ export const RoomContainerWrapper = styled.div`
 	.room-player {
 		.room-res-wrapper {
 			position: relative;
-			${(props) => (!props.isWaiting ? "padding-top: 56.25%;" : "")}
+			padding-top: 56.25%;
+			.room-join-fallback {
+				height: 100%;
+				width: 100%;
+
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+
+				position: absolute;
+				top: 0;
+				left: 0;
+			}
 			.react-player {
 				position: absolute;
 				top: 0;
 				left: 0;
 			}
 		}
-		.room-join-fallback {
-			height: 100%;
-			width: 100%;
-
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-		}
 	}
 
 	.room-sidebar {
 		height: 80vh;
 
-		display: ${(props) => (props.isWaiting ? "none" : "grid")};
+		display: grid;
 		grid-template-rows: auto 4fr 8fr auto;
 		grid-row-gap: 1em;
 
 		min-height: 0;
 		min-width: 0;
+
+		.watchmates {
+			display: block;
+		}
 
 		.chatbox {
 			overflow: hidden;
@@ -80,6 +88,12 @@ export const RoomContainerWrapper = styled.div`
 
 		.room-sidebar {
 			height: 100%;
+
+			grid-template-rows: auto 1fr auto;
+
+			.watchmates {
+				display: none;
+			}
 		}
 	}
 `;

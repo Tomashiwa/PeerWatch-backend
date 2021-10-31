@@ -6,8 +6,10 @@ function ChatInput({ isDisabled = false, onSubmit }) {
 
 	const submitMsg = (e) => {
 		e.preventDefault();
-		onSubmit(inputRef.current.value);
-		inputRef.current.value = "";
+		if (inputRef.current.value.length > 0) {
+			onSubmit(inputRef.current.value);
+			inputRef.current.value = "";
+		}
 	};
 
 	return (

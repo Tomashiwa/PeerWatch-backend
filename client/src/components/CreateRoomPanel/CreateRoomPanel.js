@@ -19,7 +19,6 @@ function CreateRoomPanel() {
 			roomId,
 			hostId: userInfo.userId,
 		};
-
 		axios
 			.post("/api/rooms/create", newRoom)
 			.then((createRes) => {
