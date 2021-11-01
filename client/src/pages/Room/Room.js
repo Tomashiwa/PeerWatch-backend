@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { Suspense, useState, useEffect, useCallback, useContext } from "react";
 import { useHistory, useParams } from "react-router";
 import { io } from "socket.io-client";
 import { CircularProgress, Typography } from "@mui/material";
@@ -8,18 +8,18 @@ import URL from "../../util/url";
 
 import Chatbox from "../../components/ChatBox/Chatbox";
 import VideoLinker from "../../components/VideoLinker/VideoLinker";
-import VideoPlayer from "../../components/VideoPlayer/VideoPlayer";
 import Watchmates from "../../components/Watchmates/Watchmates";
 import UserContext from "../../components/Context/UserContext";
 import RoomDrawer from "../../components/RoomDrawer/RoomDrawer";
-import RoomPageWrapper from "./Room.styled";
+import { RoomPageWrapper, RoomContainerWrapper } from "./Room.styled";
 import TimeoutModal from "../../components/TimeoutModal/TimeoutModal";
+
+const VideoPlayer = React.lazy(() => import("../../components/VideoPlayer/VideoPlayer"));
 
 function Room() {
 	const { id } = useParams();
 	const [user, setUser] = useState({});
 	const [users, setUsers] = useState([]);
-	const [settings, setSettings] = useState({});
 	const [isWaiting, setIsWaiting] = useState(true);
 	const [isLinkerDisabled, setIsLinkerDisabled] = useState(false);
 	const [isChatDisabled, setIsChatDisabled] = useState(false);
@@ -38,16 +38,24 @@ function Room() {
 
 	// Handle changing of room settings
 	const receiveSettings = useCallback(
-		(newCapacity, newSettings) => {
-			setRoomInfo({ ...roomInfo, newCapacity });
-			setSettings(newSettings);
+		(newCapacity, newUsers) => {
+			const newUser = newUsers.filter((u) => u.userId === userInfo.userId)[0];
+			setUser(newUser);
+			setUsers(newUsers);
+			if (!isNaN(newCapacity)) {
+				setRoomInfo({ ...roomInfo, newCapacity });
+			}
 		},
-		[roomInfo]
+		[roomInfo, userInfo]
 	);
-	const saveCallback = (newCapacity, newSettings) => {
-		setRoomInfo({ ...roomInfo, capacity: newCapacity });
-		setSettings(newSettings);
-		chatSocket.emit("SEND_ROOM_SETTINGS", id, newCapacity, newSettings);
+	const saveCallback = (newCapacity, newUsers) => {
+		const newUser = newUsers.filter((u) => u.userId === userInfo.userId)[0];
+		setUser(newUser);
+		setUsers(newUsers);
+		chatSocket.emit("SEND_ROOM_SETTINGS", id, newCapacity, newUsers);
+		if (!isNaN(newCapacity)) {
+			setRoomInfo({ ...roomInfo, capacity: newCapacity });
+		}
 	};
 
 	// Handle kicking of users
@@ -87,7 +95,8 @@ function Room() {
 
 		Promise.all([getUsers, getCapacityCount])
 			.then((res) => {
-				const userIds = res[0].data.map((entry) => entry.userId);
+				const usersFound = res[0].data;
+				const userIds = usersFound.map((entry) => entry.userId);
 				const { capacity, count } = res[1].data;
 
 				if (userIds.includes(userInfo.userId)) {
@@ -115,18 +124,7 @@ function Room() {
 							setChatSocket(newChatSocket);
 							setVideoSocket(newVideoSocket);
 
-							// TEMPORARY PLACEHOLDER
-							// To-do: GET settings from DB
-							setSettings({
-								users: joinRes.data.map((user) => {
-									return {
-										...user,
-										displayName: user.userId,
-										canChat: true,
-										canVideo: true,
-									};
-								}),
-							});
+							setUsers(usersFound);
 						})
 						.catch((err) => {
 							history.push("/room_notfound");
@@ -170,19 +168,6 @@ function Room() {
 						}
 					}
 					setUsers(newUsers);
-
-					// TEMPORARY PLACEHOLDER
-					// To-do: GET settings from DB
-					setSettings({
-						users: newUsers.map((user) => {
-							return {
-								...user,
-								displayName: user.userId,
-								canChat: true,
-								canVideo: true,
-							};
-						}),
-					});
 				})
 				.catch((err) => console.log(err));
 		},
@@ -205,56 +190,55 @@ function Room() {
 
 	// Enable/disable chatbox and linker based on settings
 	useEffect(() => {
-		if (settings && settings.users) {
-			const userSettings = settings.users.filter(
-				(user) => user.userId === userInfo.userId
-			)[0];
-			if (userSettings) {
-				setIsChatDisabled(!userSettings.canChat);
-				setIsLinkerDisabled(!userSettings.canVideo);
-			}
+		if (user) {
+			setIsChatDisabled(!user.canChat);
+			setIsLinkerDisabled(!user.canVideo);
 		}
-	}, [settings, userInfo]);
+	}, [user]);
 
 	return (
 		<RoomPageWrapper>
-			<div className="room-player">
-				{isWaiting && (
-					<div className="room-join-fallback">
-						<CircularProgress color="warning" />
-						<Typography align="center" variant="h6">
-							Joining...
-						</Typography>
+			<RoomContainerWrapper isWaiting={isWaiting}>
+				<div className="room-player">
+					<div className="room-res-wrapper">
+						{isWaiting && (
+							<div className="room-join-fallback">
+								<CircularProgress color="warning" />
+								<Typography align="center" variant="h6">
+									Joining...
+								</Typography>
+							</div>
+						)}
+						<Suspense>
+							<VideoPlayer
+								users={users}
+								user={user}
+								socket={videoSocket}
+								roomId={id}
+								isWaiting={isWaiting}
+								setIsWaiting={setIsWaiting}
+								roomInfo={roomInfo}
+								setRoomInfo={setRoomInfo}
+								finishCallback={openTimout}
+							/>
+						</Suspense>
 					</div>
-				)}
-				<div className="room-res-wrapper">
-					<VideoPlayer
-						users={users}
-						user={user}
-						socket={videoSocket}
+				</div>
+				<div className="room-sidebar">
+					<VideoLinker isDisabled={isLinkerDisabled} linkCallback={linkCallback} />
+					<Watchmates users={users} />
+					<Chatbox socket={chatSocket} roomId={id} isDisabled={isChatDisabled} />
+					<RoomDrawer
 						roomId={id}
-						isWaiting={isWaiting}
-						setIsWaiting={setIsWaiting}
-						roomInfo={roomInfo}
-						setRoomInfo={setRoomInfo}
-						finishCallback={openTimout}
+						isHost={user.isHost}
+						capacity={roomInfo.capacity}
+						users={users}
+						kickCallback={kickCallback}
+						saveCallback={saveCallback}
 					/>
 				</div>
-			</div>
-			<div className="room-sidebar">
-				<VideoLinker isDisabled={isLinkerDisabled} linkCallback={linkCallback} />
-				<Watchmates users={users} />
-				<Chatbox socket={chatSocket} roomId={id} isDisabled={isChatDisabled} />
-				<RoomDrawer
-					roomId={id}
-					isHost={user.isHost}
-					capacity={roomInfo.capacity}
-					settings={settings}
-					kickCallback={kickCallback}
-					saveCallback={saveCallback}
-				/>
-			</div>
-			<TimeoutModal isOpen={isTimeoutPromptOpen} closeCallback={closeTimeout} />
+				<TimeoutModal isOpen={isTimeoutPromptOpen} closeCallback={closeTimeout} />
+			</RoomContainerWrapper>
 		</RoomPageWrapper>
 	);
 }

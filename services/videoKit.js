@@ -11,17 +11,25 @@ const roomHoldersMap = new Map();
 // Mapping socket ID to user ID
 const socketUserMap = new Map();
 
-const disconnectUser = (socketId, userId, roomId) => {
+const MAX_DISCONNECTION_RETRIES = 3;
+
+const disconnectUser = (socketId, userId, roomId, retries) => {
+	if (retries <= 0) {
+		console.log(`User ${userId} failed to disconnect after retrying, abort disonnection`);
+		return;
+	}
+
 	const sql = "DELETE FROM users_in_rooms WHERE roomId = ? AND userId = ?";
 	db.query(sql, [roomId, userId], (derr, dres) => {
 		if (derr) {
-			return res.status(500).json({ message: derr.message });
-		}
-		if (dres.affectedRows == 0) {
+			console.log(`User ${userId} failed to disconnect, attempting another disconnect...`);
+			disconnectUser(socketId, userId, roomId, retries - 1);
+		} else if (dres.affectedRows === 0) {
 			console.log("Room or user does not exist");
+		} else {
+			socketUserMap.delete(socketId);
+			console.log("User disconnected...");
 		}
-		socketUserMap.delete(socketId);
-		console.log("User disconnected...");
 	});
 };
 
@@ -80,7 +88,12 @@ module.exports = (io) => {
 			const roomId = socketRoomMap.get(socket.id);
 
 			if (socketUserMap.has(socket.id)) {
-				disconnectUser(socket.id, socketUserMap.get(socket.id), roomId);
+				disconnectUser(
+					socket.id,
+					socketUserMap.get(socket.id),
+					roomId,
+					MAX_DISCONNECTION_RETRIES
+				);
 			}
 
 			// Remove user from roomSocket map

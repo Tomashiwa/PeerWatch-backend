@@ -22,7 +22,9 @@ export const ContentWrapper = styled.div`
 	background: ${(props) => props.theme.darkGray};
 
 	display: grid;
-	grid-template-rows: auto 1fr 5fr 1fr;
+	grid-template-rows: ${(props) =>
+		props.hasError ? "auto auto auto 4fr 1fr" : "auto auto 5fr 1fr"};
+	grid-row-gap: 0.5em;
 
 	.settings-title {
 		color: ${(props) => props.theme.orange};
@@ -48,6 +50,10 @@ export const ContentWrapper = styled.div`
 		p {
 			margin-right: 15px;
 		}
+	}
+
+	.capacity-error {
+		color: red;
 	}
 
 	.settings-table {

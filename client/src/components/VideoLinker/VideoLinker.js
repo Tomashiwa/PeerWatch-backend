@@ -13,6 +13,7 @@ function VideoLinker({ isDisabled = false, linkCallback }) {
 	return (
 		<form onSubmit={submitLink}>
 			<TextFieldWrapper
+				id="textfield-link"
 				disabled={isDisabled}
 				inputRef={inputRef}
 				placeholder="Enter video link here!"

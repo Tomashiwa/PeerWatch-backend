@@ -4,6 +4,7 @@ const app = express();
 cors = require("cors");
 const { instrument } = require("@socket.io/admin-ui");
 const path = require("path");
+const compression = require("compression");
 
 const users = require("./routes/api/users");
 const rooms = require("./routes/api/rooms");
@@ -12,6 +13,7 @@ const { Server } = require("socket.io");
 
 app.use(express.json());
 app.use(cors());
+app.use(compression());
 app.get("/api/ping", ping);
 app.use("/api/users", users);
 app.use("/api/rooms", rooms);

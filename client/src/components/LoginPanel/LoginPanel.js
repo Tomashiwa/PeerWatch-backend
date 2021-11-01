@@ -15,7 +15,7 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 	const emailRef = useRef(null);
 	const passRef = useRef(null);
 	const [generalFlag, setGeneralFlag] = useState(false);
-	const [generalMsg, setGeneralMsg] = useState("");
+	const [generalError, setGeneralError] = useState("");
 	const { setUserInfo } = useContext(UserContext);
 
 	const login = (e) => {
@@ -47,7 +47,7 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 			.catch((err) => {
 				if (err.response) {
 					setGeneralFlag(true);
-					setGeneralMsg(err.response.data.message);
+					setGeneralError(err.response.data.message);
 				}
 			});
 	};
@@ -55,15 +55,17 @@ function LoginPanel({ successCallback, toRegisterCallback, toRecoveryCallback })
 	return (
 		<Panel rowGap="1em">
 			<FormWrapper onSubmit={login}>
-				{generalFlag && <p style={{ color: "red" }}> {generalMsg} </p>}
+				{generalFlag && <p style={{ color: "red" }}> {generalError} </p>}
 
 				<TextFieldWrapper
+					id="textfield-login-email"
 					required
 					inputRef={emailRef}
 					variant="filled"
 					label="Email address"
 				/>
 				<TextFieldWrapper
+					id="textfield-login-pass"
 					required
 					inputRef={passRef}
 					variant="filled"

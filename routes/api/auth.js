@@ -11,80 +11,98 @@ require("dotenv").config();
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-// Delete when done integrating recover and reset with DB
-const accounts = [];
+const resetIDEmailMap = new Map();
+const emailResetIDMap = new Map();
+const endpoint = process.env.NODE_ENV === "production" ? "http://54.179.111.98:5000/" : "http://localhost:3000/";
 
-// Might wanna store this in db?
-const resets = new Map();
+const checkEmailExist = (email) => {
+		const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+		return new Promise((resolve, reject) => {
+			db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+				if (selectUserRes != null && selectUserRes.length != 0) {
+					console.log("Email already exists");
+					reject(false);
+				}
+				console.log("Can use email for registration");
+				resolve(true);
+			});
+		});
+}
 
-var registerValidation = [
+const checkRepeatedPassword = (repeatedPassword, req) => {
+	if (repeatedPassword !== req.body.password) {
+		console.log("repeated password not same");
+		return false;
+	}
+	return true;
+}
+
+const registerValidation = [
 	check("email", "Email must be of valid email format.").isEmail(),
+	check("email", "Email already exists.").custom(value => checkEmailExist(value)),
 	check("displayName")
 		.isLength({ min: 1 })
-		.withMessage("Display Name must be at least 1 character."),
-	check("password")
+		.withMessage("Display Name must contain at least 1 character."),
+	check("password", "Password must contain at least 8 characters, numbers, and letters.")
 		.isLength({ min: 8 })
-		.withMessage("Password must be at least 8 characters.")
 		.matches("[0-9]")
-		.withMessage("Password must contain numbers.")
-		.matches("[A-z]")
-		.withMessage("Password must contain letters."),
+		.matches("[A-z]"),
+	check("repeatedPassword", "Please enter the same password.").custom((value, {req}) => checkRepeatedPassword(value, req))
 ];
 
-var resetValidation = [
-	check("password")
+const resetValidation = [
+	check("password", "Password must contain at least 8 characters, numbers, and letters.")
 		.isLength({ min: 8 })
-		.withMessage("Password must be at least 8 characters.")
 		.matches("[0-9]")
-		.withMessage("Password must contain numbers.")
-		.matches("[A-z]")
-		.withMessage("Password must contain letters."),
+		.matches("[A-z]"),
+	check("repeatedPassword", "Please enter the same password.").custom((value, {req}) => checkRepeatedPassword(value, req))
 ];
 
 router.post("/recover", async (req, res) => {
-	// find account with email
-	const account = accounts.find((account) => account.email === req.body.email);
-	if (account === null) {
-		// email not found.
-		console.log("email not found");
+	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+	const email = req.body.email;
+	db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+		if (selectUserRes == null || selectUserRes.length == 0) {
+			console.log("email not found");
+			return res.status(401).json({
+				message: "Email not registered.",
+			});
+		}
+        const email = selectUserRes[0].email;
 
-		return res.status(401).json({
-			message: "Account not registered.",
-		});
-	}
+		// Check if password reset request for email already exists.
+		let resetID = emailResetIDMap.get(email);
+		if (typeof existingResetID === "undefined") {
+			// map some random id to email to keep track
+			resetID = crypto.randomBytes(16).toString("hex");
+			resetIDEmailMap.set(resetID, email);
+			emailResetIDMap.set(email, resetID);
+			console.log(`random ID mapped to email: ${resetID}`);
+		}
 
-	const email = account.email;
-	// map some random id to email to keep track
-	const randomID = crypto.randomBytes(16).toString("hex");
-	resets.set(randomID, email);
-	console.log(`random ID mapped to email: ${randomID}`);
+        // use hashed password as secret.
+        const password = selectUserRes[0].password;
+        // get some token that will expire in 15 mins. To expire the link that is sent to user.
+        const resetToken = jwt.sign({ email: email }, password, { expiresIn: "15m" });
+        console.log(`signed reset token: ${resetToken}`);
 
-	// use hashed password as secret.
-	const password = account.password;
-	// get some token that will expire in 15 mins. To expire the link that is sent to user.
-	const resetToken = jwt.sign({ email: email }, password, { expiresIn: "15m" });
-	console.log(`signed reset token: ${resetToken}`);
+        const link = endpoint + "reset/" + resetID + "/" + resetToken;
+        console.log(`link: ${link}`);
 
-	// Need change the link later.
-	const link = "http://localhost:3000/resetapi/" + randomID + "/" + resetToken;
-	console.log(`link: ${link}`);
+        //send email
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
 
-	//send email
-	const transporter = nodemailer.createTransport({
-		service: "gmail",
-		auth: {
-			// The credentials posted in group chat
-			user: process.env.EMAIL_USER,
-			pass: process.env.EMAIL_PASS,
-		},
-	});
-
-	const message = {
-		from: "PeerWatch Team <peerwatchteam@gmail.com>",
-		// Can change to some disposable email to test
-		to: email,
-		subject: "PeerWatch Account Password Reset",
-		text: `Dear User,
+        const message = {
+            from: "PeerWatch Team <peerwatchteam@gmail.com>",
+            to: email,
+            subject: "PeerWatch Account Password Reset",
+            text: `Dear User,
 		
 The following is the link to reset your password:
 ${link}
@@ -97,88 +115,106 @@ Cheers,
 Peerwatch Team`,
 	};
 
-	transporter.sendMail(message, (err, body) => {
-		if (err) {
-			console.log(err);
-			return res.status(500).send(err.message);
-		}
-		console.log("email sent: " + body.response);
-		console.log(body);
-	});
+        transporter.sendMail(message, (err, body) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send(err.message);
+            }
+            console.log("email sent: " + body.response);
+            console.log(body);
+        });
 
-	// remove message after testing
-	return res.status(200).json({
-		message: "Email sent",
-		ID: randomID,
-		token: resetToken,
+        return res.status(200).json({
+            message: "Email sent"
+        });
+    });
+});
+
+router.post("/authreset", (req, res) => {
+	const resetID = req.body.rid;
+	if (resetID === null) {
+		// no random id provided
+		console.log("resetID not given");
+
+		return res.status(401).json({
+			message: "Reset ID invalid.",
+		});
+	}
+
+	// get email from mapped random ID
+	const email = resetIDEmailMap.get(resetID);
+	if (typeof email === "undefined") {
+		// somehow email not mapped or invalid
+		console.log("email not mapped");
+
+		return res.status(401).json({
+			message: "Reset ID invalid.",
+		});
+	}
+
+	const authHeader = req.headers["authorization"];
+	const resetToken = authHeader && authHeader.split(" ")[1];
+	if (resetToken === null) {
+		// no token
+		console.log("resetToken not given");
+
+		return res.status(401).json({
+			message: "Reset Token invalid.",
+		});
+	}
+
+	// Use email to find account's old password from DB to verify jwt token
+    const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+	db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+		if (selectUserRes == null || selectUserRes.length == 0) {
+		    console.log("Account somehow not found");
+			return res.status(401).json({
+			message: "Invalid email.",
+			});
+		}
+        const oldPassword = selectUserRes[0].password;
+        // check if token invalid or expired.
+        jwt.verify(resetToken, oldPassword, (err, account) => {
+            if (err) {
+                // token expired or invalid
+                console.log("token invalid or expired");
+
+                return res.status(401).json({
+                    message: "Invalid link.",
+                });
+            } else {
+                console.log("token verified");
+
+                return res.status(200).json({
+                    message: "Reset token verified.",
+                });
+            }
+        });
 	});
 });
 
-router.put("/reset/:_id", resetValidation, async (req, res) => {
+router.put("/reset", resetValidation, async (req, res) => {
 	try {
-		// change the errors when want to test what went wrong
-		const randomID = req.params._id;
-		if (randomID === null) {
+		const resetID = req.body.rid;
+		if (resetID === null) {
 			// no random id
-			console.log("randomID not given");
+			console.log("resetID not given");
 
 			return res.status(401).json({
-				message: "Invalid link.",
+				message: "Reset ID invalid.",
 			});
 		}
 
 		// get email from mapped random ID
-		var email = resets.get(randomID);
+		const email = resetIDEmailMap.get(resetID);
 		if (typeof email === undefined) {
 			// somehow email not mapped or invalid
-			console.log("email somehow not mapped");
+			console.log("email not mapped");
 
 			return res.status(401).json({
-				message: "Invalid link.",
+				message: "Reset ID invalid.",
 			});
 		}
-
-		const authHeader = req.headers["authorization"];
-		const resetToken = authHeader && authHeader.split(" ")[1];
-		if (resetToken === null) {
-			// no token
-			console.log("resetToken not given");
-
-			return res.status(401).json({
-				message: "Invalid link.",
-			});
-		}
-
-		// get password from accounts list
-		// Use email to find account's old password from DB to verify jwt token
-		let oldPassword = null;
-		let idx = -1;
-		for (let i = 0; i < accounts.length; i++) {
-			if (accounts[i].email === email) {
-				oldPassword = accounts[i].password;
-				idx = i;
-			}
-		}
-
-		if (oldPassword === null) {
-			console.log("Account somehow not found");
-
-			return res.status(401).json({
-				message: "Account somehow not found.",
-			});
-		}
-
-		// check if token invalid or expired.
-		jwt.verify(resetToken, oldPassword, (err, account) => {
-			if (err) {
-				// token expired or invalid
-				console.log("token invalid or expired");
-
-				return res.status(401).json({
-					message: "Invalid link.",
-				});
-			}
-		});
 
 		// if password has validation error
 		const errors = await validationResult(req);
@@ -186,17 +222,26 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 			return res.status(422).json({ errors: errors.array() });
 		}
 
+		// Set new password
+		// if email somehow does not exist, then return error.
 		const newPassword = await bcrypt.hash(req.body.password, 10);
-		// set new password for account with the email
-		accounts[idx].password = newPassword;
-
-		// delete mapping since able to reset
-		resets.delete(randomID);
-
-		console.log("Password resetted");
-		return res.status(200).json({
-			message: "Password resetted successfully.",
+        const updatePasswordSQL = "UPDATE users SET password = ? WHERE email = ?";
+		db.query(updatePasswordSQL, [newPassword, email], (updatePasswordErr, updatePasswordRes) => {
+		    if (updatePasswordRes.affectedRows == 0) {
+                return res.status(401).json({
+                    message: "Invalid email.",
+                });
+		    }
+			
+		    // delete mapping since able to reset
+            resetIDEmailMap.delete(resetID);
+			emailResetIDMap.delete(email);
+            console.log("Password resetted");
+            return res.status(200).json({
+                message: "Password resetted successfully.",
+            });
 		});
+
 	} catch (err) {
 		console.log("something went wrong in reset");
 		console.log(err.message);
@@ -207,7 +252,7 @@ router.put("/reset/:_id", resetValidation, async (req, res) => {
 router.post("/register", registerValidation, async (req, res) => {
 	try {
 		// if account credentials has validation errors
-		const errors = validationResult(req);
+		const errors = await validationResult(req);
 		if (!errors.isEmpty()) {
 			return res.status(422).json({ errors: errors.array() });
 		}
@@ -215,41 +260,31 @@ router.post("/register", registerValidation, async (req, res) => {
 		const email = req.body.email;
 		const password = await bcrypt.hash(req.body.password, 10);
 
-		// check if email already exists
-		const selectUserSQl = "SELECT * FROM users WHERE email = ?";
-		db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
-			if (selectUserRes != null && selectUserRes.length != 0) {
-				console.log("email already exists");
-				return res.status(409).json({
-					message: "Email already exists.",
-				});
+		// Create and add account
+		const newUser = {
+			email: email,
+			displayName: req.body.displayName,
+			password: password,
+			isGoogle: false,
+		};
+		
+		const insertUserSQL = "INSERT INTO users SET ?";
+		db.query(insertUserSQL, newUser, (insertUserErr, insertUserRes) => {
+			if (insertUserErr) {
+				return res.status(500).send(insertUserErr);
 			}
+			newUser.userId = insertUserRes.insertId;
 
-			// Create and add account
-			let newUser = {
-				email: email,
-				displayName: req.body.displayName,
-				password: password,
-				isGoogle: false,
-			};
-			const insertUserSQL = "INSERT INTO users SET ?";
-			db.query(insertUserSQL, newUser, (insertUserErr, insertUserRes) => {
-				if (insertUserErr) {
-					return res.status(500).send(insertUserErr);
-				}
-				newUser.userId = insertUserRes.insertId;
-
-				const accessToken = jwt.sign(newUser, process.env.ACCESS_SECRET, {
-					expiresIn: "30 days",
-				});
-				console.log("Account created");
-				res.status(201).json({
-					message: "Account registered.",
-					token: accessToken,
-					userId: newUser.userId,
-					displayName: newUser.displayName,
-					email: newUser.email,
-				});
+			const accessToken = jwt.sign(newUser, process.env.ACCESS_SECRET, {
+				expiresIn: "30 days",
+			});
+			console.log("Account created");
+			return res.status(201).json({
+				message: "Account registered.",
+				token: accessToken,
+				userId: newUser.userId,
+				displayName: newUser.displayName,
+				email: newUser.email,
 			});
 		});
 	} catch (err) {

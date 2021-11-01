@@ -9,6 +9,9 @@ const ChatboxWrapper = styled.div`
 
 	.chatbox-content {
 		height: 90%;
+		li {
+			overflow-wrap: anywhere;
+		}
 	}
 
 	.chatbox-input {
