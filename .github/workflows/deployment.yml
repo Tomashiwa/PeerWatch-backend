@@ -7,9 +7,22 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        node-version: ['16.x']
+  
     steps:
       - uses: actions/checkout@v2
+
+      - name: Install Nodejs ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+            node-version: ${{ matrix.node-version }}
+      
+      - name: Install dependencies
+        run: npm run install-all
+      - name: Build client
+        run: npm run client-build
 
       - name: Create ZIP deployment package
         run: zip -r deploy_package.zip ./
