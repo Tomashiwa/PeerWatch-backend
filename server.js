@@ -27,8 +27,8 @@ if (process.env.NODE_ENV === "production") {
 	});
 }
 
-const server = app.listen("5000", () => {
-	console.log("Server started on port 5000...");
+const server = app.listen("8080", () => {
+	console.log("Server started on port 8080...");
 });
 
 const io = new Server(server, {
