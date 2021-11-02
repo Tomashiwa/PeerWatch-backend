@@ -43,35 +43,30 @@ module.exports = (io) => {
 				.then((results) => console.log(results))
 				.catch((err) => console.log(err));
 
+			// Emit new user list
 			const key = `${roomUsersPrefix}_${roomId}`;
-			redisClient
-				.exists(key)
-				.then(async (res) => {
-					const users = await redisClient.smembers(key);
-					if (!users) {
-						console.log("get members of users failed");
-						return;
-					}
-
-					users.push(userId);
-
-					const addRes = await redisClient.sadd(`${roomUsersPrefix}_${roomId}`, userId);
-					if (!addRes) {
-						console.log("add to set failed");
-						return;
-					}
-
-					roomIO.in(roomId).emit("update-user-list", users, users[0]);
-					callback();
+			const existsRoomUsers = redisClient.exists(key);
+			const membersRoomUsers = redisClient.smembers(key);
+			const addRoomUsers = redisClient.sadd(key, userId);
+			let newUsers;
+			existsRoomUsers
+				.then((existsRes) => {
+					membersRoomUsers
+						.then((users) => {
+							newUsers = users;
+							newUsers.push(userId);
+							return addRoomUsers;
+						})
+						.then((addRes) => {
+							roomIO.in(roomId).emit("update-user-list", newUsers, newUsers[0]);
+							callback();
+						});
 				})
-				.catch(async (err) => {
-					const addRes = await redisClient.sadd(`${roomUsersPrefix}_${roomId}`, userId);
-					if (!addRes) {
-						console.log("add to set failed");
-						return;
-					}
-					roomIO.in(roomId).emit("update-user-list", [userId], userId);
-					callback();
+				.catch((existsErr) => {
+					addRoomUsers.then((addRes) => {
+						roomIO.in(roomId).emit("update-user-list", [userId], userId);
+						callback();
+					});
 				});
 		});
 
