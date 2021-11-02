@@ -53,7 +53,7 @@ module.exports = (io) => {
 				.then((existsRes) => {
 					membersRoomUsers
 						.then((users) => {
-							newUsers = users;
+							newUsers = users.map((user) => parseInt(user));
 							newUsers.push(userId);
 							return addRoomUsers;
 						})
