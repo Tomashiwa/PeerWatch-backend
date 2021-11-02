@@ -37,6 +37,7 @@ const io = new Server(server, {
 			"http://localhost:3000",
 			"https://admin.socket.io/",
 			"http://13.250.235.202:3000/",
+			"http://peerwatch.ap-southeast-1.elasticbeanstalk.com/",
 		],
 		credentials: false,
 	},
