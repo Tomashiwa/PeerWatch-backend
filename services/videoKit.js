@@ -9,8 +9,6 @@ const roomSocketMap = new Map();
 const bufferReadysMap = new Map();
 // Store rooms that are being held
 const roomHoldersMap = new Map();
-// Mapping socket ID to user ID
-const socketUserMap = new Map();
 
 const VIDEO_PREFIX_SOCKETROOM = "VIDEO_SOCKETROOM";
 const VIDEO_PREFIX_ROOMSOCKETS = "VIDEO_ROOMSOCKETS";
@@ -39,7 +37,6 @@ const disconnectUser = (socketId, userId, roomId, retries) => {
 				.then((res) => console.log("ENTRY deleted"))
 				.catch((err) => console.log(err));
 
-			socketUserMap.delete(socketId);
 			console.log("User disconnected...");
 		}
 	});
@@ -87,10 +84,6 @@ module.exports = (io) => {
 					}
 				})
 				.catch((err) => console.log(err));
-
-			if (!socketUserMap.has(socket.id)) {
-				socketUserMap.set(socket.id, userId);
-			}
 		});
 
 		// 1. Join room via id
@@ -159,15 +152,6 @@ module.exports = (io) => {
 						.catch((setErr) => console.log(setErr));
 				})
 				.catch((err) => console.log(err));
-
-			if (socketUserMap.has(socket.id)) {
-				disconnectUser(
-					socket.id,
-					socketUserMap.get(socket.id),
-					roomId,
-					MAX_DISCONNECTION_RETRIES
-				);
-			}
 
 			// Remove user from roomSocket map
 			if (socketRoomMap.has(socket.id) && roomSocketMap.has(socketRoomMap.get(socket.id))) {
