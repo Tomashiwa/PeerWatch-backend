@@ -1,4 +1,5 @@
 const db = require("../services/db");
+const { redisClient } = require("./redis");
 
 // Mapping a socket to the room it is in
 const socketRoomMap = new Map();
@@ -10,6 +11,12 @@ const bufferReadysMap = new Map();
 const roomHoldersMap = new Map();
 // Mapping socket ID to user ID
 const socketUserMap = new Map();
+
+const VIDEO_PREFIX_SOCKETROOM = "VIDEO_SOCKETROOM";
+const VIDEO_PREFIX_ROOMSOCKETS = "VIDEO_ROOMSOCKETS";
+const VIDEO_PREFIX_BUFFERREADYS = "VIDEO_BUFFERREADYS";
+const VIDEO_PREFIX_ROOMHOLDERS = "VIDEO_ROOMHOLDERS";
+const VIDEO_PREFIX_SOCKETUSER = "VIDEO_SOCKETUSER";
 
 const MAX_DISCONNECTION_RETRIES = 3;
 
@@ -27,6 +34,11 @@ const disconnectUser = (socketId, userId, roomId, retries) => {
 		} else if (dres.affectedRows === 0) {
 			console.log("Room or user does not exist");
 		} else {
+			redisClient
+				.del(`${VIDEO_PREFIX_SOCKETUSER}_${socketId}`)
+				.then((res) => console.log("ENTRY deleted"))
+				.catch((err) => console.log(err));
+
 			socketUserMap.delete(socketId);
 			console.log("User disconnected...");
 		}
@@ -62,6 +74,20 @@ module.exports = (io) => {
 
 		// Pair up socket id with a user id
 		socket.on("SUBSCRIBE_USER_TO_SOCKET", (userId) => {
+			redisClient
+				.exists(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`)
+				.then((existRes) => {
+					if (existRes === 1) {
+						console.log(`Subscription already exists: ${existRes}`);
+					} else {
+						redisClient
+							.append(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`, userId)
+							.then((appendRes) => console.log("Subscription success"))
+							.catch((appendErr) => console.log(appendErr));
+					}
+				})
+				.catch((err) => console.log(err));
+
 			if (!socketUserMap.has(socket.id)) {
 				socketUserMap.set(socket.id, userId);
 			}
@@ -72,6 +98,15 @@ module.exports = (io) => {
 			console.log(`${socket.id} has joined the video room ${roomId}`);
 			socket.join(roomId);
 
+			redisClient
+				.append(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`, roomId)
+				.then((appendRes) =>
+					redisClient.sadd(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`, socket.id)
+				)
+				.then((saddRes) => console.log("JOINED ROOM"))
+				.catch((err) => console.log(err))
+				.finally(() => callback());
+
 			// Update mapping
 			socketRoomMap.set(socket.id, roomId);
 			if (roomSocketMap.has(roomId)) {
@@ -80,12 +115,50 @@ module.exports = (io) => {
 				roomSocketMap.set(roomId, [socket.id]);
 			}
 
+			console.log("JOINED ROOM");
+			// console.log(getSocketRooms(videoIO));
+
 			callback();
 		});
 
 		// 2. Cleanup after a user disconnects
 		socket.on("disconnect", () => {
+			console.log("LEFT ROOM");
+			// console.log(getSocketRooms(videoIO));
+
 			const roomId = socketRoomMap.get(socket.id);
+
+			const getRoomId = redisClient.get(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`);
+			const getUserId = redisClient
+				.get(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`)
+				.then((res) => console.log(`RESULT HERE: ${res}`))
+				.catch((err) => console.log(`ERROR HERE: ${err}`));
+
+			Promise.all([getRoomId, getUserId])
+				.then((res) => {
+					const roomId2 = res[0];
+					const userId = res[1];
+					console.log(`Retrieved roomId: ${roomId2}, userId: ${userId}`);
+
+					disconnectUser(socket.id, userId, roomId2, MAX_DISCONNECTION_RETRIES);
+					redisClient
+						.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId2}`)
+						.then((size) => {
+							if (size === 1) {
+								deleteRoom(roomId2);
+							}
+							return redisClient.srem(
+								`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId2}`,
+								socket.id
+							);
+						})
+						.then((remRes) =>
+							redisClient.del(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`)
+						)
+						.then((delRes) => console.log(`Removed user from room ${roomId2}`))
+						.catch((setErr) => console.log(setErr));
+				})
+				.catch((err) => console.log(err));
 
 			if (socketUserMap.has(socket.id)) {
 				disconnectUser(
@@ -100,12 +173,24 @@ module.exports = (io) => {
 			if (socketRoomMap.has(socket.id) && roomSocketMap.has(socketRoomMap.get(socket.id))) {
 				const newSockets = roomSocketMap.get(roomId).filter((id) => id != socket.id);
 
+				socketRoomMap.delete(socket.id);
 				if (newSockets.length <= 0) {
 					deleteRoom(roomId);
 				} else {
 					roomSocketMap.set(roomId, newSockets);
 				}
 			}
+
+			// const socketIsBufferer = redisClient.get(`${bufferReadysPrefix}_${socket.id}`);
+			// const socketIsHolder = redisClient
+			// 	.get(`${roomHoldersPrefix}_${roomId}`)
+			// 	.then((holderId) => {
+			// 		if (holderId === socket.id) {
+			// 			return true;
+			// 		} else {
+			// 			throw new Error("Socket is not a holder");
+			// 		}
+			// 	});
 
 			if (
 				bufferReadysMap.has(socket.id) ||

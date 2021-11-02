@@ -1,7 +1,7 @@
 const ping = require("./routes/api/ping");
 const express = require("express");
 const app = express();
-cors = require("cors");
+const cors = require("cors");
 const { instrument } = require("@socket.io/admin-ui");
 const path = require("path");
 const compression = require("compression");
@@ -45,8 +45,6 @@ io.adapter(adapter);
 // Add events, middlewares and other addons to the socket
 require("./services/roomKit")(io);
 require("./services/videoKit")(io);
-
-// pubClient.duplicate().set()
 
 // Admin tool for socket.io
 instrument(io, { auth: false, namespaceName: "/" });
