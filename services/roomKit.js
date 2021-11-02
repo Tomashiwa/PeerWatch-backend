@@ -1,12 +1,11 @@
-const retrieveUserLists = () => {
-	//some way to retrieve current user list from DB?
-};
+const { redisClient } = require("./redis");
 
-const socketUserMap = new Map();
-// Mapping a user to the room it is in
-const userRoomMap = new Map();
 // Mapping a room to all the users in the room
 const roomUsersMap = new Map();
+
+const socketUserPrefix = "SOCKETUSER";
+const userRoomPrefix = "USERROOM";
+const roomUsersPrefix = "ROOMUSERS";
 
 module.exports = (io) => {
 	const roomIO = io.of("/chat");
@@ -36,13 +35,16 @@ module.exports = (io) => {
 		});
 
 		// join the client to the room "number" received.
-		socket.on("join-room", (roomId, userId, callback) => {
+		socket.on("join-room", async (roomId, userId, callback) => {
 			console.log(`${socket.id} has joined the room ${roomId}`);
 			socket.join(roomId);
 
 			// Update mapping
-			socketUserMap.set(socket.id, userId);
-			userRoomMap.set(userId, roomId); // To-do. change to multiple rooms ?
+			const appendSocketUser = redisClient.append(`${socketUserPrefix}_${socket.id}`, userId);
+			const appendUserRoom = redisClient.append(`${userRoomPrefix}_${userId}`, roomId);
+			Promise.all([appendSocketUser, appendUserRoom])
+				.then((results) => console.log(results))
+				.catch((err) => console.log(err));
 
 			let newList;
 			if (roomUsersMap.has(roomId)) {
@@ -59,16 +61,18 @@ module.exports = (io) => {
 			callback();
 		});
 
-		socket.on("disconnect", function () {
-			if (
-				!socketUserMap.has(socket.id) ||
-				!userRoomMap.has(socketUserMap.get(socket.id)) ||
-				!roomUsersMap.has(userRoomMap.get(socketUserMap.get(socket.id)))
-			) {
+		socket.on("disconnect", async function () {
+			const userId = parseInt(await redisClient.get(`${socketUserPrefix}_${socket.id}`));
+			if (!userId) {
+				console.log("userId not found");
 				return;
 			}
-			const userId = socketUserMap.get(socket.id);
-			const roomId = userRoomMap.get(userId);
+
+			const roomId = await redisClient.get(`${userRoomPrefix}_${userId}`);
+			if (!roomId || !roomUsersMap.has(roomId)) {
+				console.log("roomId not found");
+				return;
+			}
 
 			let newUserList = roomUsersMap.get(roomId);
 			for (let i = 0; i < newUserList.length; i++) {
@@ -77,7 +81,14 @@ module.exports = (io) => {
 				}
 			}
 
-			socketUserMap.delete(socket.id);
+			redisClient
+				.del(`${socketUserPrefix}_${socket.id}`)
+				.then((res) => console.log(res))
+				.catch((err) => console.log(err));
+			redisClient
+				.del(`${userRoomPrefix}_${userId}`)
+				.then((res) => console.log(res))
+				.catch((err) => console.log(err));
 			roomUsersMap.set(roomId, newUserList);
 			socket.to(roomId).emit("update-user-list", newUserList, newUserList[0]);
 		});
