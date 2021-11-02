@@ -11,8 +11,6 @@ const rooms = require("./routes/api/rooms");
 const auth = require("./routes/api/auth");
 
 const { Server } = require("socket.io");
-const { createAdapter } = require("@socket.io/redis-adapter");
-const { createClient } = require("redis");
 
 app.use(express.json());
 app.use(cors());
@@ -41,9 +39,8 @@ const io = new Server(server, {
 	},
 });
 
-const pubClient = createClient({ host: "localhost", port: 6379 });
-const subClient = pubClient.duplicate();
-io.adapter(createAdapter(pubClient, subClient));
+const { adapter } = require("./services/redis");
+io.adapter(adapter);
 
 // Add events, middlewares and other addons to the socket
 require("./services/roomKit")(io);
