@@ -15,8 +15,8 @@ const resetIDEmailMap = new Map();
 const emailResetIDMap = new Map();
 const endpoint =
 	process.env.NODE_ENV === "production"
-		? "http://peerwatch.ap-southeast-1.elasticbeanstalk.com:8080"
-		: "http://localhost:8080";
+		? "http://peerwatch.ap-southeast-1.elasticbeanstalk.com/"
+		: "http://localhost:8080/";
 
 const checkEmailExist = (email) => {
 	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
