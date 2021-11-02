@@ -13,21 +13,24 @@ router.use(bodyParser.json());
 
 const resetIDEmailMap = new Map();
 const emailResetIDMap = new Map();
-const endpoint = process.env.NODE_ENV === "production" ? "http://54.179.111.98:5000/" : "http://localhost:3000/";
+const endpoint =
+	process.env.NODE_ENV === "production"
+		? "http://peerwatch.ap-southeast-1.elasticbeanstalk.com:8080"
+		: "http://localhost:8080";
 
 const checkEmailExist = (email) => {
-		const selectUserSQl = "SELECT * FROM users WHERE email = ?";
-		return new Promise((resolve, reject) => {
-			db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
-				if (selectUserRes != null && selectUserRes.length != 0) {
-					console.log("Email already exists");
-					reject(false);
-				}
-				console.log("Can use email for registration");
-				resolve(true);
-			});
+	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+	return new Promise((resolve, reject) => {
+		db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+			if (selectUserRes != null && selectUserRes.length != 0) {
+				console.log("Email already exists");
+				reject(false);
+			}
+			console.log("Can use email for registration");
+			resolve(true);
 		});
-}
+	});
+};
 
 const checkRepeatedPassword = (repeatedPassword, req) => {
 	if (repeatedPassword !== req.body.password) {
@@ -35,11 +38,11 @@ const checkRepeatedPassword = (repeatedPassword, req) => {
 		return false;
 	}
 	return true;
-}
+};
 
 const registerValidation = [
 	check("email", "Email must be of valid email format.").isEmail(),
-	check("email", "Email already exists.").custom(value => checkEmailExist(value)),
+	check("email", "Email already exists.").custom((value) => checkEmailExist(value)),
 	check("displayName")
 		.isLength({ min: 1 })
 		.withMessage("Display Name must contain at least 1 character."),
@@ -47,7 +50,9 @@ const registerValidation = [
 		.isLength({ min: 8 })
 		.matches("[0-9]")
 		.matches("[A-z]"),
-	check("repeatedPassword", "Please enter the same password.").custom((value, {req}) => checkRepeatedPassword(value, req))
+	check("repeatedPassword", "Please enter the same password.").custom((value, { req }) =>
+		checkRepeatedPassword(value, req)
+	),
 ];
 
 const resetValidation = [
@@ -55,7 +60,9 @@ const resetValidation = [
 		.isLength({ min: 8 })
 		.matches("[0-9]")
 		.matches("[A-z]"),
-	check("repeatedPassword", "Please enter the same password.").custom((value, {req}) => checkRepeatedPassword(value, req))
+	check("repeatedPassword", "Please enter the same password.").custom((value, { req }) =>
+		checkRepeatedPassword(value, req)
+	),
 ];
 
 router.post("/recover", async (req, res) => {
@@ -68,7 +75,7 @@ router.post("/recover", async (req, res) => {
 				message: "Email not registered.",
 			});
 		}
-        const email = selectUserRes[0].email;
+		const email = selectUserRes[0].email;
 
 		// Check if password reset request for email already exists.
 		let resetID = emailResetIDMap.get(email);
@@ -80,29 +87,29 @@ router.post("/recover", async (req, res) => {
 			console.log(`random ID mapped to email: ${resetID}`);
 		}
 
-        // use hashed password as secret.
-        const password = selectUserRes[0].password;
-        // get some token that will expire in 15 mins. To expire the link that is sent to user.
-        const resetToken = jwt.sign({ email: email }, password, { expiresIn: "15m" });
-        console.log(`signed reset token: ${resetToken}`);
+		// use hashed password as secret.
+		const password = selectUserRes[0].password;
+		// get some token that will expire in 15 mins. To expire the link that is sent to user.
+		const resetToken = jwt.sign({ email: email }, password, { expiresIn: "15m" });
+		console.log(`signed reset token: ${resetToken}`);
 
-        const link = endpoint + "reset/" + resetID + "/" + resetToken;
-        console.log(`link: ${link}`);
+		const link = endpoint + "reset/" + resetID + "/" + resetToken;
+		console.log(`link: ${link}`);
 
-        //send email
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+		//send email
+		const transporter = nodemailer.createTransport({
+			service: "gmail",
+			auth: {
+				user: process.env.EMAIL_USER,
+				pass: process.env.EMAIL_PASS,
+			},
+		});
 
-        const message = {
-            from: "PeerWatch Team <peerwatchteam@gmail.com>",
-            to: email,
-            subject: "PeerWatch Account Password Reset",
-            text: `Dear User,
+		const message = {
+			from: "PeerWatch Team <peerwatchteam@gmail.com>",
+			to: email,
+			subject: "PeerWatch Account Password Reset",
+			text: `Dear User,
 		
 The following is the link to reset your password:
 ${link}
@@ -113,21 +120,21 @@ Thank You.
 		
 Cheers,
 Peerwatch Team`,
-	};
+		};
 
-        transporter.sendMail(message, (err, body) => {
-            if (err) {
-                console.log(err);
-                return res.status(500).send(err.message);
-            }
-            console.log("email sent: " + body.response);
-            console.log(body);
-        });
+		transporter.sendMail(message, (err, body) => {
+			if (err) {
+				console.log(err);
+				return res.status(500).send(err.message);
+			}
+			console.log("email sent: " + body.response);
+			console.log(body);
+		});
 
-        return res.status(200).json({
-            message: "Email sent"
-        });
-    });
+		return res.status(200).json({
+			message: "Email sent",
+		});
+	});
 });
 
 router.post("/authreset", (req, res) => {
@@ -164,32 +171,32 @@ router.post("/authreset", (req, res) => {
 	}
 
 	// Use email to find account's old password from DB to verify jwt token
-    const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
 	db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
 		if (selectUserRes == null || selectUserRes.length == 0) {
-		    console.log("Account somehow not found");
+			console.log("Account somehow not found");
 			return res.status(401).json({
-			message: "Invalid email.",
+				message: "Invalid email.",
 			});
 		}
-        const oldPassword = selectUserRes[0].password;
-        // check if token invalid or expired.
-        jwt.verify(resetToken, oldPassword, (err, account) => {
-            if (err) {
-                // token expired or invalid
-                console.log("token invalid or expired");
+		const oldPassword = selectUserRes[0].password;
+		// check if token invalid or expired.
+		jwt.verify(resetToken, oldPassword, (err, account) => {
+			if (err) {
+				// token expired or invalid
+				console.log("token invalid or expired");
 
-                return res.status(401).json({
-                    message: "Invalid link.",
-                });
-            } else {
-                console.log("token verified");
+				return res.status(401).json({
+					message: "Invalid link.",
+				});
+			} else {
+				console.log("token verified");
 
-                return res.status(200).json({
-                    message: "Reset token verified.",
-                });
-            }
-        });
+				return res.status(200).json({
+					message: "Reset token verified.",
+				});
+			}
+		});
 	});
 });
 
@@ -225,23 +232,26 @@ router.put("/reset", resetValidation, async (req, res) => {
 		// Set new password
 		// if email somehow does not exist, then return error.
 		const newPassword = await bcrypt.hash(req.body.password, 10);
-        const updatePasswordSQL = "UPDATE users SET password = ? WHERE email = ?";
-		db.query(updatePasswordSQL, [newPassword, email], (updatePasswordErr, updatePasswordRes) => {
-		    if (updatePasswordRes.affectedRows == 0) {
-                return res.status(401).json({
-                    message: "Invalid email.",
-                });
-		    }
-			
-		    // delete mapping since able to reset
-            resetIDEmailMap.delete(resetID);
-			emailResetIDMap.delete(email);
-            console.log("Password resetted");
-            return res.status(200).json({
-                message: "Password resetted successfully.",
-            });
-		});
+		const updatePasswordSQL = "UPDATE users SET password = ? WHERE email = ?";
+		db.query(
+			updatePasswordSQL,
+			[newPassword, email],
+			(updatePasswordErr, updatePasswordRes) => {
+				if (updatePasswordRes.affectedRows == 0) {
+					return res.status(401).json({
+						message: "Invalid email.",
+					});
+				}
 
+				// delete mapping since able to reset
+				resetIDEmailMap.delete(resetID);
+				emailResetIDMap.delete(email);
+				console.log("Password resetted");
+				return res.status(200).json({
+					message: "Password resetted successfully.",
+				});
+			}
+		);
 	} catch (err) {
 		console.log("something went wrong in reset");
 		console.log(err.message);
@@ -267,7 +277,7 @@ router.post("/register", registerValidation, async (req, res) => {
 			password: password,
 			isGoogle: false,
 		};
-		
+
 		const insertUserSQL = "INSERT INTO users SET ?";
 		db.query(insertUserSQL, newUser, (insertUserErr, insertUserRes) => {
 			if (insertUserErr) {
