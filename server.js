@@ -33,7 +33,11 @@ const server = app.listen("5000", () => {
 
 const io = new Server(server, {
 	cors: {
-		origin: ["http://localhost:3000", "https://admin.socket.io/", "http://54.179.111.98:3000/"],
+		origin: [
+			"http://localhost:3000",
+			"https://admin.socket.io/",
+			"http://13.250.235.202:3000/",
+		],
 		credentials: false,
 	},
 });

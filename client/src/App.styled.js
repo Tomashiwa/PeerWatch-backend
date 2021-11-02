@@ -29,10 +29,6 @@ const AppWrapper = styled.div`
 		text-align: center;
 		height: 100%;
 	}
-
-	.stretch-height {
-		min-height: 100vh;
-	}
 `;
 
 export default AppWrapper;
