@@ -37,11 +37,11 @@ module.exports = (io) => {
 			socket.join(roomId);
 
 			// Update mapping
-			const appendSocketUser = redisClient.append(
+			const appendSocketUser = redisClient.set(
 				`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`,
 				userId
 			);
-			const appendUserRoom = redisClient.append(`${ROOM_PREFIX_USERROOM}_${userId}`, roomId);
+			const appendUserRoom = redisClient.set(`${ROOM_PREFIX_USERROOM}_${userId}`, roomId);
 			Promise.all([appendSocketUser, appendUserRoom])
 				.then((results) => console.log(results))
 				.catch((err) => console.log(err));
@@ -74,12 +74,11 @@ module.exports = (io) => {
 		});
 
 		socket.on("disconnect", async function () {
-			const userRes = await redisClient.get(`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`);
-			if (!userRes) {
-				console.log("userRes not found");
+			const userId = await redisClient.get(`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`);
+			if (!userId) {
+				console.log("userId not found");
 				return;
 			}
-			const userId = parseInt(userRes);
 
 			const roomId = await redisClient.get(`${ROOM_PREFIX_USERROOM}_${userId}`);
 			if (!roomId) {
@@ -93,17 +92,13 @@ module.exports = (io) => {
 				return;
 			}
 
-			let newUsers = users;
-			for (let i = 0; i < newUsers.length; i++) {
-				if (newUsers[i] === userId) {
-					newUsers.splice(i, 1);
-				}
-			}
+			let newUsers = users.filter((user) => user !== userId).map((user) => parseInt(user));
 
 			const deleteSocketUser = redisClient.del(`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`);
 			const deleteUserRoom = redisClient.del(`${ROOM_PREFIX_USERROOM}_${userId}`);
 			Promise.all([deleteSocketUser, deleteUserRoom])
 				.then(async (res) => {
+					console.log("deletion sucess");
 					const removeRes = await redisClient.srem(
 						`${ROOM_PREFIX_ROOMUSERS}_${roomId}`,
 						userId

@@ -9,7 +9,7 @@ const client = pubClient.duplicate();
 const exists = promisify(client.exists).bind(client);
 
 // Strings
-const append = promisify(client.append).bind(client);
+const set = promisify(client.set).bind(client);
 const get = promisify(client.get).bind(client);
 const del = promisify(client.del).bind(client);
 
@@ -32,7 +32,7 @@ module.exports = {
 	adapter,
 	redisClient: {
 		exists,
-		append,
+		set,
 		get,
 		del,
 		sadd,

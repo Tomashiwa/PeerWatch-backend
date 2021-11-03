@@ -87,7 +87,7 @@ module.exports = (io) => {
 						console.log(`Subscription already exists: ${existRes}`);
 					} else {
 						redisClient
-							.append(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`, userId)
+							.set(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`, userId)
 							.then((appendRes) => console.log("Subscription success"))
 							.catch((appendErr) => console.log(appendErr));
 					}
@@ -101,7 +101,7 @@ module.exports = (io) => {
 			socket.join(roomId);
 
 			redisClient
-				.append(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`, roomId)
+				.set(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`, roomId)
 				.then((appendRes) =>
 					redisClient.sadd(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`, socket.id)
 				)
@@ -137,6 +137,9 @@ module.exports = (io) => {
 		};
 
 		const passDownBufferer = (roomId, bufferEntry) => {
+			console.log("ENTRY to PASS DOWN:");
+			console.log(bufferEntry);
+
 			redisClient
 				.smembers(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
 				.then((sockets) => {
@@ -148,12 +151,17 @@ module.exports = (io) => {
 					};
 					redisClient
 						.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
-						.then((delRes) =>
-							redisClient.append(
+						.then((delRes) => {
+							console.log(
+								`SET ${VIDEO_PREFIX_BUFFERREADYS}_${nextBufferer} => ${JSON.stringify(
+									newEntry
+								)}`
+							);
+							redisClient.set(
 								`${VIDEO_PREFIX_BUFFERREADYS}_${nextBufferer}`,
 								JSON.stringify(newEntry)
-							)
-						)
+							);
+						})
 						.then((appendRed) => videoIO.to(roomId).emit("SET_BUFFERER", nextBufferer))
 						.catch((err) => console.log(err));
 				})
@@ -184,8 +192,11 @@ module.exports = (io) => {
 									)
 									.catch((delErr) => console.log(delErr));
 							} else {
+								console.log(
+									`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}'s entryStr: ${newEntry}`
+								);
 								redisClient
-									.append(
+									.set(
 										`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`,
 										JSON.stringify(newEntry)
 									)
@@ -214,9 +225,35 @@ module.exports = (io) => {
 					deleteSocketFromRoom(roomId);
 
 					redisClient
-						.get(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
-						.then((entryStr) => passDownBufferer(roomId, JSON.parse(entryStr)))
-						.catch((bufferErr) => removeSelfFromBuffer(roomId));
+						.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+						.then((exists) => {
+							if (exists === 1) {
+								redisClient
+									.get(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+									.then((entryStr) => {
+										if (entryStr) {
+											console.log(
+												`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}'s entryStr: ${entryStr}`
+											);
+											passDownBufferer(roomId, JSON.parse(entryStr));
+										}
+									})
+									.catch((bufferErr) => removeSelfFromBuffer(roomId));
+							}
+						})
+						.catch((existErr) => console.log(existErr));
+
+					// redisClient
+					// 	.get(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+					// 	.then((entryStr) => {
+					// 		if (entryStr) {
+					// 			console.log(
+					// 				`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}'s entryStr: ${entryStr}`
+					// 			);
+					// 			passDownBufferer(roomId, JSON.parse(entryStr));
+					// 		}
+					// 	})
+					// 	.catch((bufferErr) => removeSelfFromBuffer(roomId));
 				})
 				.catch((err) => console.log(err));
 			///////////////////////////////////////////
@@ -321,7 +358,7 @@ module.exports = (io) => {
 						);
 					} else {
 						redisClient
-							.append(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`, socket.id)
+							.set(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`, socket.id)
 							.then((appendRes) => {
 								console.log(`${socket.id} ask all other users to HOLD`);
 								socket.to(roomId).emit("HOLD", socket.id);
@@ -363,8 +400,11 @@ module.exports = (io) => {
 				readys: [],
 				target: numOfUsers,
 			};
+			console.log(
+				`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}'s entryStr: ${JSON.stringify(newEntry)}`
+			);
 			redisClient
-				.append(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, JSON.stringify(newEntry))
+				.set(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, JSON.stringify(newEntry))
 				.then((appendRes) => console.log(appendRes))
 				.catch((appendErr) => console.log(appendErr));
 		};
@@ -384,19 +424,21 @@ module.exports = (io) => {
 					redisClient
 						.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
 						.then((numOfSockets) => {
-							if (numOfSockets === 0) {
+							const numOfUsers = numOfSockets - 1;
+
+							if (numOfUsers <= 0) {
 								releaseBufferer(socket.id, roomId);
 							}
 
 							console.log(
-								`${socket.id} requests for ${numOfSockets} unique readys at ${newTiming}`
+								`${socket.id} requests for ${numOfUsers} unique readys at ${newTiming}`
 							);
 
 							redisClient
 								.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
 								.then((entryExists) => {
 									if (entryExists === 0) {
-										addEmptyBufferEntry(socket.id, roomId, numOfSockets - 1);
+										addEmptyBufferEntry(socket.id, roomId, numOfUsers);
 									}
 
 									console.log(`Ask room ${roomId} to prepare release`);
@@ -495,8 +537,14 @@ module.exports = (io) => {
 									.finally(() => releaseSelfCallback());
 							} else {
 								console.log("NANI");
+								console.log(
+									`SET ${VIDEO_PREFIX_BUFFERREADYS}_${buffererId} => ${JSON.stringify(
+										newEntry
+									)}`
+								);
+
 								redisClient
-									.append(
+									.set(
 										`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`,
 										JSON.stringify(newEntry)
 									)
