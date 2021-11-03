@@ -20,6 +20,12 @@ const srem = promisify(client.srem).bind(client);
 const sismember = promisify(client.sismember).bind(client);
 const smembers = promisify(client.smembers).bind(client);
 
+// Hashed objects
+const hget = promisify(client.hget).bind(client);
+const hgetall = promisify(client.hgetall).bind(client);
+const hset = promisify(client.hset).bind(client);
+const hmset = promisify(client.hmset).bind(client);
+
 const adapter = createAdapter(pubClient, subClient);
 
 module.exports = {
@@ -34,5 +40,9 @@ module.exports = {
 		srem,
 		sismember,
 		smembers,
+		hget,
+		hgetall,
+		hset,
+		hmset,
 	},
 };
