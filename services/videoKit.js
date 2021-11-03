@@ -1,4 +1,5 @@
 const db = require("../services/db");
+const redis = require("./redis");
 const { redisClient } = require("./redis");
 
 // Mapping a socket to the room it is in
@@ -29,14 +30,17 @@ const disconnectUser = (socketId, userId, roomId, retries) => {
 		if (derr) {
 			console.log(`User ${userId} failed to disconnect, attempting another disconnect...`);
 			disconnectUser(socketId, userId, roomId, retries - 1);
-		} else if (dres.affectedRows === 0) {
+			return;
+		}
+
+		redisClient
+			.del(`${VIDEO_PREFIX_SOCKETUSER}_${socketId}`)
+			.then((res) => {})
+			.catch((err) => console.log(err));
+
+		if (dres.affectedRows === 0) {
 			console.log("Room or user does not exist");
 		} else {
-			redisClient
-				.del(`${VIDEO_PREFIX_SOCKETUSER}_${socketId}`)
-				.then((res) => console.log("ENTRY deleted"))
-				.catch((err) => console.log(err));
-
 			console.log("User disconnected...");
 		}
 	});
@@ -115,6 +119,78 @@ module.exports = (io) => {
 		});
 
 		// 2. Cleanup after a user disconnects
+		const deleteSocketFromRoom = (roomId) => {
+			redisClient
+				.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
+				.then((size) => {
+					if (size === 1) {
+						deleteRoom(roomId);
+					}
+					return redisClient.srem(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`, socket.id);
+				})
+				.then((remRes) => redisClient.del(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`))
+				.then((delRes) => console.log(`Removed user from room ${roomId}`))
+				.catch((setErr) => console.log(setErr));
+		};
+
+		// const passDownBufferer = (roomId, bufferEntry) => {
+		// 	redisClient
+		// 		.get(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
+		// 		.then((sockets) => {
+		// 			const nextBufferer = sockets[0];
+		// 			const newEntry = {
+		// 				roomId: bufferEntry.roomId,
+		// 				readys: bufferEntry.readys.filter((ready) => ready != nextBufferer),
+		// 				target: bufferEntry.target - 1,
+		// 			};
+		// 			redisClient
+		// 				.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+		// 				.then((delRes) =>
+		// 					redisClient.append(
+		// 						`${VIDEO_PREFIX_BUFFERREADYS}_${nextBufferer}`,
+		// 						newEntry
+		// 					)
+		// 				)
+		// 				.then((appendRed) => videoIO.to(roomId).emit("SET_BUFFERER", nextBufferer))
+		// 				.catch((err) => console.log(err));
+		// 		})
+		// 		.catch((err) => console.log(err));
+		// };
+
+		// const removeSelfFromBuffer = (roomId) => {
+		// 	redisClient
+		// 		.get(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+		// 		.then((buffererId) => {
+		// 			redisClient
+		// 				.get(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
+		// 				.then((bufferEntry) => {
+		// 					const newEntry = {
+		// 						roomId: bufferEntry.roomId,
+		// 						readys: bufferEntry.ready.filter((read) => ready != socket.id),
+		// 						target: bufferEntry.target - 1,
+		// 					};
+		// 					if (newEntry.readys.length >= newEntry.target) {
+		// 						redisClient
+		// 							.del(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
+		// 							.then((delRes) =>
+		// 								redisClient.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+		// 							)
+		// 							.then((delRes) =>
+		// 								console.log("Received all users, releasing all readys")
+		// 							)
+		// 							.catch((delErr) => console.log(delErr));
+		// 					} else {
+		// 						redisClient
+		// 							.append(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, newEntry)
+		// 							.then((appendRes) => console.log("Update buffer entry"))
+		// 							.catch((appendErr) => console.log(appendErr));
+		// 					}
+		// 				})
+		// 				.catch((bufferErr) => console.log(bufferErr));
+		// 		})
+		// 		.catch((roomErr) => console.log(roomErr));
+		// };
+
 		socket.on("disconnect", () => {
 			console.log("LEFT ROOM");
 			// console.log(getSocketRooms(videoIO));
@@ -122,34 +198,19 @@ module.exports = (io) => {
 			const roomId = socketRoomMap.get(socket.id);
 
 			const getRoomId = redisClient.get(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`);
-			const getUserId = redisClient
-				.get(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`)
-				.then((res) => console.log(`RESULT HERE: ${res}`))
-				.catch((err) => console.log(`ERROR HERE: ${err}`));
+			const getUserId = redisClient.get(`${VIDEO_PREFIX_SOCKETUSER}_${socket.id}`);
 
 			Promise.all([getRoomId, getUserId])
 				.then((res) => {
 					const roomId2 = res[0];
-					const userId = res[1];
-					console.log(`Retrieved roomId: ${roomId2}, userId: ${userId}`);
-
+					const userId = parseInt(res[1]);
 					disconnectUser(socket.id, userId, roomId2, MAX_DISCONNECTION_RETRIES);
-					redisClient
-						.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId2}`)
-						.then((size) => {
-							if (size === 1) {
-								deleteRoom(roomId2);
-							}
-							return redisClient.srem(
-								`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId2}`,
-								socket.id
-							);
-						})
-						.then((remRes) =>
-							redisClient.del(`${VIDEO_PREFIX_SOCKETROOM}_${socket.id}`)
-						)
-						.then((delRes) => console.log(`Removed user from room ${roomId2}`))
-						.catch((setErr) => console.log(setErr));
+					deleteSocketFromRoom(roomId2);
+
+					// redisClient
+					// 	.get(`${bufferReadysPrefix}_${socket.id}`)
+					// 	.then((bufferEntry) => passDownBufferer(roomId2, bufferEntry))
+					// 	.catch((bufferErr) => removeSelfFromBuffer(roomId2));
 				})
 				.catch((err) => console.log(err));
 
@@ -247,6 +308,28 @@ module.exports = (io) => {
 
 		// 4. Ask all other users to wait
 		socket.on("REQUEST_HOLD", (roomId) => {
+			// if (roomId === "") {
+			// 	console.log(`Invalid room ID: ${roomId}`);
+			// 	return;
+			// }
+
+			// redisClient
+			// 	.get(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+			// 	.then((getRes) =>
+			// 		console.log(`Room ${roomId} being held, ignoring HOLD from ${socket.id}...`)
+			// 	)
+			// 	.catch((getErr) => {
+			// 		redisClient
+			// 			.append(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`, socket.id)
+			// 			.then((appendRes) => {
+			// 				console.log(`${socket.id} ask all other users to HOLD`);
+			// 				socket.to(roomId).emit("HOLD", socket.id);
+			// 			})
+			// 			.catch((appendErr) => {
+			// 				console.log(err);
+			// 			});
+			// 	});
+
 			if (roomId === "") {
 				console.log(`Invalid room ID: ${roomId}`);
 			} else if (roomHoldersMap.has(roomId)) {
@@ -261,7 +344,59 @@ module.exports = (io) => {
 		});
 
 		// 5. Ask all other users to prepare to resume at a given timing
+		// const releaseBufferer = (buffererId, roomId) => {
+		// 	redisClient
+		// 		.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+		// 		.then((delRes) => redisClient.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`))
+		// 		.then((delRes) => videoIO.to(socket.id).emit("RELEASE"))
+		// 		.catch((delErr) => console.log(delErr));
+		// };
+		// const addEmptyBufferEntry = (buffererId, roomId, numOfSockets) => {
+		// 	const newEntry = {
+		// 		roomId,
+		// 		readys: new Set(),
+		// 		target: numOfSockets,
+		// 	};
+		// 	redisClient
+		// 		.append(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, newEntry)
+		// 		.then((appendRes) => console.log(appendRes))
+		// 		.catch((appendErr) => console.log(appendErr));
+		// };
 		socket.on("REQUEST_RELEASE", (roomId, newTiming) => {
+			// if (roomId === "") {
+			// 	console.log(`Invalid room ID: ${roomId}`);
+			// 	return;
+			// }
+
+			// redisClient.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`).then((exists) => {
+			// 	if (exists === 1) {
+			// 		console.log(
+			// 			`${socket.id} is already waiting for release, ignoring this release request...`
+			// 		);
+			// 	} else {
+			// 		redisClient
+			// 			.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
+			// 			.then((numOfSockets) => {
+			// 				if (numOfSockets === 0) {
+			// 					releaseBufferer(socket.id, roomId);
+			// 				}
+
+			// 				console.log(
+			// 					`${socket.id} requests for ${numOfUsers} unique readys at ${newTiming}`
+			// 				);
+
+			// 				redisClient
+			// 					.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+			// 					.then((entryExists) => {
+			// 						if (entryExists === 0) {
+			// 							addEmptyBufferEntry(socket.id, roomId, numOfSockets);
+			// 						}
+			// 						socket.to(roomId).emit("PREPARE_RELEASE", newTiming);
+			// 					});
+			// 			});
+			// 	}
+			// });
+
 			if (roomId === "") {
 				console.log(`Invalid room ID: ${roomId}`);
 			} else if (bufferReadysMap.has(socket.id)) {
@@ -297,6 +432,62 @@ module.exports = (io) => {
 
 		// 6. Tell the server that this user is ready to resume
 		socket.on("REQUEST_RELEASE_READY", (roomId, buffererId, releaseSelfCallback) => {
+			// redisClient.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`).then((exists) => {
+			// 	if (exists === 0) {
+			// 		redisClient
+			// 			.exists(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+			// 			.then((exists) => {
+			// 				if (exists === 1) {
+			// 					redisClient
+			// 						.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
+			// 						.then((numOfSockets) => {
+			// 							const numOfUsers = numOfSockets - 1;
+			// 							if (numOfUsers === 1) {
+			// 								redisClient
+			// 									.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+			// 									.then((delRes) =>
+			// 										videoIO.to(roomId).emit("RELEASE")
+			// 									)
+			// 									.catch((delErr) => console.log(delErr));
+			// 							}
+			// 						})
+			// 						.catch((scardErr) => console.log(scardErr));
+			// 				}
+			// 			})
+			// 			.catch((existsErr) => console.log(existsErr));
+			// 	} else {
+			// 		redisClient
+			// 			.get(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
+			// 			.then((entry) => {
+			// 				const newEntry = { ...entry, readys: [...entry.readys, socket.id] };
+			// 				if (newEntry.readys.size >= newEntry.target) {
+			// 					const deleteBufferReady = redisClient.del(
+			// 						`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`
+			// 					);
+			// 					const deleteRoomHolders = redisClient.del(
+			// 						`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`
+			// 					);
+			// 					Promise.all([deleteBufferReady, deleteRoomHolders])
+			// 						.then((res) => {
+			// 							console.log(
+			// 								`${buffererId} receive ${newEntry.readys.size} unique readys, releasing all in ${roomId}`
+			// 							);
+			// 							console.log(`Removing ${roomId} from holdSet`);
+			// 							socket.to(roomId).emit("RELEASE");
+			// 						})
+			// 						.catch((err) => console.log(err))
+			// 						.finally(() => releaseSelfCallback());
+			// 				} else {
+			// 					redisClient
+			// 						.append(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, newEntry)
+			// 						.then((appendRes) => console.log(appendRes))
+			// 						.catch((appendErr) => console.log(appendErr));
+			// 				}
+			// 			})
+			// 			.catch((err) => console.log(err));
+			// 	}
+			// });
+
 			if (!bufferReadysMap.has(buffererId)) {
 				if (roomHoldersMap.has(roomId)) {
 					console.log(
@@ -350,6 +541,21 @@ module.exports = (io) => {
 
 		// 7. Ask all other users to resume from holding
 		socket.on("REQUEST_RELEASE_ALL", (roomId) => {
+			// if (roomId === "") {
+			// 	console.log(`Invalid room ID: ${roomId}`);
+			// 	return;
+			// }
+
+			// const deleteBufferReady = redisClient.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`);
+			// const deleteRoomHolders = redisClient.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`);
+			// Promise.all([deleteBufferReady, deleteRoomHolders])
+			// 	.then((res) => {
+			// 		console.log(`${socket.id} releasing all users in ${roomId} by RELEASE_ALL`);
+			// 		console.log(`Removing ${roomId} from holdSet`);
+			// 		socket.to(roomId).emit("RELEASE");
+			// 	})
+			// 	.catch((err) => console.log(err));
+
 			if (roomId === "") {
 				console.log(`Invalid room ID: ${roomId}`);
 			} else {
