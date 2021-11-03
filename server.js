@@ -9,6 +9,7 @@ const compression = require("compression");
 const users = require("./routes/api/users");
 const rooms = require("./routes/api/rooms");
 const auth = require("./routes/api/auth");
+
 const { Server } = require("socket.io");
 
 app.use(express.json());
@@ -43,9 +44,14 @@ const io = new Server(server, {
 	},
 });
 
+const { adapter } = require("./services/redis");
+io.adapter(adapter);
+
 // Add events, middlewares and other addons to the socket
 require("./services/roomKit")(io);
 require("./services/videoKit")(io);
+
+// pubClient.duplicate().set()
 
 // Admin tool for socket.io
 instrument(io, { auth: false, namespaceName: "/" });
