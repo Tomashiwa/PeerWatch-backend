@@ -251,28 +251,59 @@ module.exports = (io) => {
 			}
 
 			// NEED TO ENSURE ATOMICITY
-			redisClient
-				.exists(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
-				.then((exists) => {
-					if (exists === 1) {
-						console.log(
-							`Room ${roomId} being held, ignoring HOLD from ${socket.id}...`
-						);
+			let isRoomHeld = 0;
+			client
+				.multi()
+				.exists(
+					`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`,
+					(err, value) => (isRoomHeld = value)
+				)
+				.exec((existErr) => {
+					if (existErr) {
+						console.log("Error checking if room is held");
+						return;
+					}
+
+					if (isRoomHeld === 1) {
+						console.log(`Room ${roomId} held, ignoring HOLD from ${socket.id}...`);
 					} else {
-						redisClient
+						client
+							.multi()
 							.set(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`, socket.id)
-							.then((appendRes) => {
+							.exec((setErr) => {
+								if (setErr) {
+									console.log("Error when setting bufferer");
+									return;
+								}
+
 								console.log(`${socket.id} ask all other users to HOLD`);
 								socket.to(roomId).emit("HOLD", socket.id);
-							})
-							.catch((appendErr) => {
-								console.log(err);
 							});
 					}
-				})
-				.catch((err) => {
-					console.log(err);
 				});
+
+			// redisClient
+			// 	.exists(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+			// 	.then((exists) => {
+			// 		if (exists === 1) {
+			// 			console.log(
+			// 				`Room ${roomId} being held, ignoring HOLD from ${socket.id}...`
+			// 			);
+			// 		} else {
+			// 			redisClient
+			// 				.set(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`, socket.id)
+			// 				.then((appendRes) => {
+			// 					console.log(`${socket.id} ask all other users to HOLD`);
+			// 					socket.to(roomId).emit("HOLD", socket.id);
+			// 				})
+			// 				.catch((appendErr) => {
+			// 					console.log(err);
+			// 				});
+			// 		}
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log(err);
+			// 	});
 		});
 
 		// 5. Ask all other users to prepare to resume at a given timing
