@@ -26,10 +26,16 @@ const hgetall = promisify(client.hgetall).bind(client);
 const hset = promisify(client.hset).bind(client);
 const hmset = promisify(client.hmset).bind(client);
 
+const multi = (commands) => {
+	const clientMulti = client.multi(commands);
+	return promisify(clientMulti.exec).call(clientMulti);
+};
+
 const adapter = createAdapter(pubClient, subClient);
 
 module.exports = {
 	adapter,
+	client,
 	redisClient: {
 		exists,
 		set,
@@ -44,5 +50,6 @@ module.exports = {
 		hgetall,
 		hset,
 		hmset,
+		multi,
 	},
 };

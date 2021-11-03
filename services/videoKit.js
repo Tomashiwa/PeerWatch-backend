@@ -1,6 +1,6 @@
 const db = require("../services/db");
 const redis = require("./redis");
-const { redisClient } = require("./redis");
+const { redisClient, redisClientMulti, client } = require("./redis");
 
 // Mapping a socket to the room it is in
 const socketRoomMap = new Map();
@@ -483,78 +483,143 @@ module.exports = (io) => {
 		});
 
 		// 6. Tell the server that this user is ready to resume
-		socket.on("REQUEST_RELEASE_READY", (roomId, buffererId, releaseSelfCallback) => {
+		socket.on("REQUEST_RELEASE_READY", async (roomId, buffererId, releaseSelfCallback) => {
 			/////////////////////////////////////////////////////
-			redisClient.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`).then((exists) => {
-				if (exists === 0) {
-					redisClient
-						.exists(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
-						.then((exists) => {
-							if (exists === 1) {
-								redisClient
-									.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
-									.then((numOfSockets) => {
-										const numOfUsers = numOfSockets - 1;
-										if (numOfUsers === 1) {
-											redisClient
-												.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
-												.then((delRes) =>
-													videoIO.to(roomId).emit("RELEASE")
-												)
-												.catch((delErr) => console.log(delErr));
-										}
-									})
-									.catch((scardErr) => console.log(scardErr));
-							}
-						})
-						.catch((existsErr) => console.log(existsErr));
-				} else {
-					redisClient
-						.get(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
-						.then((entryStr) => {
-							const entry = JSON.parse(entryStr);
-							console.log(`entry:`);
-							console.log(entry);
-							const newEntry = { ...entry, readys: [...entry.readys, socket.id] };
-							console.log(`new entry:`);
-							console.log(newEntry);
-							if (newEntry.readys.length >= newEntry.target) {
-								const deleteBufferReady = redisClient.del(
-									`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`
-								);
-								const deleteRoomHolders = redisClient.del(
-									`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`
-								);
-								Promise.all([deleteBufferReady, deleteRoomHolders])
-									.then((res) => {
-										console.log(
-											`${buffererId} receive ${newEntry.readys.size} unique readys, releasing all in ${roomId}`
-										);
-										console.log(`Removing ${roomId} from holdSet`);
-										socket.to(roomId).emit("RELEASE");
-									})
-									.catch((err) => console.log("Delete fail"))
-									.finally(() => releaseSelfCallback());
-							} else {
-								console.log("NANI");
-								console.log(
-									`SET ${VIDEO_PREFIX_BUFFERREADYS}_${buffererId} => ${JSON.stringify(
-										newEntry
-									)}`
-								);
+			redisClient
+				.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
+				.then(async (exists) => {
+					if (exists === 0) {
+						redisClient
+							.exists(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+							.then((exists) => {
+								if (exists === 1) {
+									redisClient
+										.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
+										.then((numOfSockets) => {
+											const numOfUsers = numOfSockets - 1;
+											if (numOfUsers === 1) {
+												redisClient
+													.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+													.then((delRes) =>
+														videoIO.to(roomId).emit("RELEASE")
+													)
+													.catch((delErr) => console.log(delErr));
+											}
+										})
+										.catch((scardErr) => console.log(scardErr));
+								}
+							})
+							.catch((existsErr) => console.log(existsErr));
+					} else {
+						let entry, newEntry;
 
-								redisClient
-									.set(
-										`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`,
-										JSON.stringify(newEntry)
-									)
-									.then((appendRes) => console.log(appendRes))
-									.catch((appendErr) => console.log(appendErr));
-							}
-						})
-						.catch((err) => console.log(err));
-				}
-			});
+						const response = client
+							.multi()
+							.set("key", "value")
+							.set("another-key", "another-value")
+							.get("another-key")
+							.exec((res, value) => console.log(`${res} | ${value}`)); // ['OK', 'another-value']
+
+						client
+							.multi()
+							.get(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, (err, entryStr) => {
+								console.log(`entryStr: ${entryStr}`);
+								entry = JSON.parse(entryStr);
+								newEntry = { ...entry, readys: [...entry.readys, socket.id] };
+							})
+							.exec((getErr, getRes) => {
+								if (getErr) {
+									console.log("Get encounter error");
+									console.log(getErr);
+									return;
+								}
+
+								console.log("Entry:");
+								console.log(entry);
+								console.log("newEntry:");
+								console.log(newEntry);
+
+								if (newEntry.readys.length >= newEntry.target) {
+									client
+										.multi()
+										.del(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
+										.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+										.exec((delErr, delRes) => {
+											if (!delErr) {
+												console.log("Deletion success");
+												socket.to(roomId).emit("RELEASE");
+											} else {
+												console.log("Deletion encountered error");
+												console.log(delErr);
+											}
+											releaseSelfCallback();
+										});
+								} else {
+									client
+										.multi()
+										.set(
+											`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`,
+											JSON.stringify(newEntry)
+										)
+										.exec((setErr, setRes) => {
+											if (setErr) {
+												console.log("set encounter error");
+												console.log(setErr);
+												return;
+											}
+
+											console.log("BufferRead updated with newEntry");
+										});
+								}
+							});
+
+						// redisClient
+						// 	.get(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`)
+						// 	.then((entryStr) => {
+						// 		console.log(`buffererId: ${buffererId}`);
+						// 		const entry = JSON.parse(entryStr);
+						// 		console.log(`entry:`);
+						// 		console.log(entry);
+						// 		const newEntry = { ...entry, readys: [...entry.readys, socket.id] };
+						// 		console.log(`new entry:`);
+						// 		console.log(newEntry);
+						// 		if (newEntry.readys.length >= newEntry.target) {
+						// 		const deleteBufferReady = redisClient.del(
+						// 			`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`
+						// 		);
+						// 		const deleteRoomHolders = redisClient.del(
+						// 			`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`
+						// 		);
+						// 		Promise.all([deleteBufferReady, deleteRoomHolders])
+						// 			.then((res) => {
+						// 				console.log(
+						// 					`${buffererId} receive ${newEntry.readys.size} unique readys, releasing all in ${roomId}`
+						// 				);
+						// 				console.log(`Removing ${roomId} from holdSet`);
+						// 				socket.to(roomId).emit("RELEASE");
+						// 			})
+						// 			.catch((err) => console.log("Delete fail"))
+						// 			.finally(() => releaseSelfCallback());
+						// 	} else {
+						// 		console.log("NANI");
+						// 		console.log(
+						// 			`SET ${VIDEO_PREFIX_BUFFERREADYS}_${buffererId} => ${JSON.stringify(
+						// 				newEntry
+						// 			)}`
+						// 		);
+
+						// 		redisClient
+						// 			.set(
+						// 				`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`,
+						// 				JSON.stringify(newEntry)
+						// 			)
+						// 			.then((appendRes) => console.log(appendRes))
+						// 			.catch((appendErr) => console.log(appendErr));
+						// 	}
+						// })
+						// .catch((err) => console.log(err));
+					}
+				});
 			/////////////////////////////////////////////////////
 
 			// if (!bufferReadysMap.has(buffererId)) {
