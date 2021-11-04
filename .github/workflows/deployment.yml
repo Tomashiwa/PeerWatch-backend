@@ -1,92 +1,49 @@
-name: deployment
+name: deploy-to-eb
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
-jobs:    
-    
-    buildAndTest:
-      name: CI Pipeline
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          node-version: ['16.x']
-          
-      steps:
-        - uses: actions/checkout@v2
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['16.x']
+  
+    steps:
+      - uses: actions/checkout@v2
 
-        # Initialize Node.js
-        - name: Install Node.js ${{ matrix.node-version }}
-          uses: actions/setup-node@v1
-          with:
+      - name: Install Nodejs ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
             node-version: ${{ matrix.node-version }}
+      
+      - name: Install dependencies
+        run: npm run install-all
+      - name: Build client
+        run: npm run client-build
 
-        # Install project dependencies, test and build
-        - name: Install dependencies
-          run: npm run install-all
-        - name: Build project
-          run: npm run client-build
-          
-    deploy:
-      name: CD Pipeline
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          python-version: [3.8]
-          node-version: ['16.x']
-          appname: ['peerwatch-codedeploy']
-          deploy-group: ['staging']
-          s3-bucket: ['peerwatch-codedeploy-deployment']
-          s3-filename: ['staging-peerwatch-codedeploy-${{ github.sha }}']
+      - name: Create ZIP deployment package
+        run: zip -r deploy_package.zip ./
 
-      needs: buildAndTest
-      steps:
-        - uses: actions/checkout@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_EB_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_EB_SECRET_KEY }}
+          aws-region: "ap-southeast-1"
 
-        # Initialize Node.js
-        - name: Install Node.js ${{ matrix.node-version }}
-          uses: actions/setup-node@v1
-          with:
-            node-version: ${{ matrix.node-version }}
+      - name: Upload package to S3 bucket
+        run: aws s3 cp deploy_package.zip s3://peerwatch-eb-deploy/
 
-        # Install project dependencies and build
-        - name: Install dependencies
-          run: npm run install-all
-        - name: Build project
-          run: npm run client-build
+      - name: Create new ElasticBeanstalk Application Version
+        run: |
+          aws elasticbeanstalk create-application-version \
+          --application-name peerwatch \
+          --source-bundle S3Bucket="peerwatch-eb-deploy",S3Key="deploy_package.zip" \
+          --version-label "ver-${{ github.sha }}" \
+          --description "commit-sha-${{ github.sha }}"
 
-        # Install AWS CLI 2
-        - name: Install AWS CLI 2
-          run: |
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install --update
-        # Configure AWS credentials
-        - name: Configure AWS credentials
-          uses: aws-actions/configure-aws-credentials@v1
-          with:
-            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws-region: ap-southeast-1
-
-        # Deploy push to AWS S3
-        - name: AWS Deploy push
-          run: |
-            aws deploy push \
-            --application-name ${{ matrix.appname }} \
-            --description "This is a revision for the ${{ matrix.appname }}-${{ github.sha }}" \
-            --ignore-hidden-files \
-            --s3-location s3://${{ matrix.s3-bucket }}/${{ matrix.s3-filename }}.zip \
-            --source .
-        # Create deployment to CodeDeploy
-        - name: AWS Create Deployment
-          run: |
-            aws deploy create-deployment \
-             --application-name ${{ matrix.appname }} \
-             --deployment-config-name CodeDeployDefault.OneAtATime \
-             --deployment-group-name ${{ matrix.deploy-group }} \
-             --file-exists-behavior OVERWRITE \
-             --s3-location bucket=${{ matrix.s3-bucket }},key=${{ matrix.s3-filename }}.zip,bundleType=zip \
-             
+      - name: Deploy new ElasticBeanstalk Application Version
+        run: aws elasticbeanstalk update-environment --environment-name peerwatch --version-label "ver-${{ github.sha }}"

@@ -28,13 +28,18 @@ if (process.env.NODE_ENV === "production") {
 	});
 }
 
-const server = app.listen("5000", () => {
-	console.log("Server started on port 5000...");
+const server = app.listen("8080", () => {
+	console.log("Server started on port 8080...");
 });
 
 const io = new Server(server, {
 	cors: {
-		origin: ["http://localhost:3000", "https://admin.socket.io/", "http://54.179.111.98:3000/"],
+		origin: [
+			"http://localhost:3000",
+			"https://admin.socket.io/",
+			"http://13.250.235.202:3000/",
+			"http://peerwatch.ap-southeast-1.elasticbeanstalk.com/",
+		],
 		credentials: false,
 	},
 });
@@ -45,6 +50,8 @@ io.adapter(adapter);
 // Add events, middlewares and other addons to the socket
 require("./services/roomKit")(io);
 require("./services/videoKit")(io);
+
+// pubClient.duplicate().set()
 
 // Admin tool for socket.io
 instrument(io, { auth: false, namespaceName: "/" });

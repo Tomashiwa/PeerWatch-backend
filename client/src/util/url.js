@@ -1,7 +1,7 @@
 const URL = {
-	LOCAL_SERVER_URL: "http://localhost:5000",
-	DEPLOYED_SERVER_URL: "http://54.179.111.98:5000",
-	FALLBACK_VIDEO: "https://www.youtube.com/watch?v=Ski_KEgOUP4",
+	LOCAL_SERVER_URL: "http://localhost:8080",
+	DEPLOYED_SERVER_URL: "http://peerwatch.ap-southeast-1.elasticbeanstalk.com",
+	FALLBACK_VIDEO: "https://www.youtube.com/watch?v=pdCaVAPZLXM",
 };
 
 export default URL;
