@@ -13,6 +13,10 @@ const ENTRYFOUND_INSUFFICIENT = "ENTRYFOUND_INSUFFICIENT";
 const ENTRYNOTFOUND_HELD_USER = "ENTRYNOTFOUND_HELD_USER";
 const ENTRYNOTFOUND_HELD_MULTIUSER = "ENTRYNOTFOUND_HELD_MULTIUSER";
 
+const ENTRYFOUND_IGNOREREQUEST = "ENTRYFOUND_IGNOREREQUEST";
+const ENTRYNOTFOUND_NOUSER_RELEASE = "ENTRYNOTFOUND_NOUSER_RELEASE";
+const ENTRYNOTFOUND_USERS_REQUEST = "ENTRYNOTFOUND_USERS_REQUEST";
+
 const MAX_DISCONNECTION_RETRIES = 3;
 
 const disconnectUser = (socketId, userId, roomId, retries) => {
@@ -141,18 +145,20 @@ module.exports = (io) => {
 						target: bufferEntry.target - 1,
 					};
 
-					redisClient
+					client
+						.multi()
 						.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
-						.then((delRes) => {
-							redisClient.set(
-								`${VIDEO_PREFIX_BUFFERREADYS}_${nextBufferer}`,
-								JSON.stringify(newEntry)
-							);
-						})
-						.then((appendRed) => {
+						.set(
+							`${VIDEO_PREFIX_BUFFERREADYS}_${nextBufferer}`,
+							JSON.stringify(newEntry)
+						)
+						.exec((err) => {
+							if (err) {
+								console.log(err);
+								return;
+							}
 							videoIO.to(roomId).emit("SET_BUFFERER", nextBufferer, newSockets[0]);
-						})
-						.catch((err) => console.log(err));
+						});
 				})
 				.catch((err) => console.log(err));
 		};
@@ -330,57 +336,42 @@ module.exports = (io) => {
 		});
 
 		// 5. Ask all other users to prepare to resume at a given timing
-		const releaseBufferer = (buffererId, roomId) => {
-			redisClient
-				.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
-				.then((delRes) => redisClient.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`))
-				.then((delRes) => videoIO.to(socket.id).emit("RELEASE"))
-				.catch((delErr) => console.log(delErr));
-		};
-		const addEmptyBufferEntry = (buffererId, roomId, numOfUsers) => {
-			const newEntry = {
-				roomId,
-				readys: [],
-				target: numOfUsers,
-			};
-
-			redisClient
-				.set(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`, JSON.stringify(newEntry))
-				.then((res) => redisClient.get(`${VIDEO_PREFIX_BUFFERREADYS}_${buffererId}`))
-				.then((res) => console.log(`result from get in then: ${res}`))
-				.catch((appendErr) => console.log(appendErr));
-		};
 		socket.on("REQUEST_RELEASE", (roomId, newTiming) => {
 			if (roomId === "") {
 				console.log(`Invalid room ID: ${roomId}`);
 				return;
 			}
 
-			redisClient.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`).then((exists) => {
-				if (exists === 1) {
-					console.log(
-						`${socket.id} is already waiting for release, ignoring this release request...`
-					);
-				} else {
-					redisClient
-						.scard(`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`)
-						.then((numOfSockets) => {
-							const numOfUsers = numOfSockets - 1;
-							if (numOfUsers <= 0) {
-								releaseBufferer(socket.id, roomId);
-							}
-
-							redisClient
-								.exists(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
-								.then((entryExists) => {
-									if (entryExists === 0) {
-										addEmptyBufferEntry(socket.id, roomId, numOfUsers);
-									}
-									socket.to(roomId).emit("PREPARE_RELEASE", newTiming);
-								});
-						});
+			client.eval(
+				fs.readFileSync("release.lua"),
+				3,
+				`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`,
+				`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`,
+				`${VIDEO_PREFIX_ROOMSOCKETS}_${roomId}`,
+				roomId,
+				"",
+				"",
+				(err, res) => {
+					if (err) {
+						console.log("Error while evaluating lua script:");
+						console.log(err);
+					} else if (res === ENTRYFOUND_IGNOREREQUEST) {
+						console.log(
+							`${socket.id} is already waiting for release, ignoring this release request...`
+						);
+					} else if (res === ENTRYNOTFOUND_NOUSER_RELEASE) {
+						console.log("No buffer entry found, no other users found, just release");
+						videoIO.to(socket.id).emit("RELEASE");
+					} else if (res === ENTRYNOTFOUND_USERS_REQUEST) {
+						console.log(
+							"No buffer entry found, users found, ask all prepare to release"
+						);
+						socket.to(roomId).emit("PREPARE_RELEASE", newTiming);
+					} else {
+						console.log("INVALID RESULT");
+					}
 				}
-			});
+			);
 		});
 
 		// 6. Tell the server that this user is ready to resume
@@ -429,14 +420,17 @@ module.exports = (io) => {
 				return;
 			}
 
-			const deleteBufferReady = redisClient.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`);
-			const deleteRoomHolders = redisClient.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`);
-
-			Promise.all([deleteBufferReady, deleteRoomHolders])
-				.then((res) => {
+			client
+				.multi()
+				.del(`${VIDEO_PREFIX_BUFFERREADYS}_${socket.id}`)
+				.del(`${VIDEO_PREFIX_ROOMHOLDERS}_${roomId}`)
+				.exec((err) => {
+					if (err) {
+						console.log(err);
+						return;
+					}
 					socket.to(roomId).emit("RELEASE");
-				})
-				.catch((err) => console.log(err));
+				});
 		});
 
 		// 8. Ask all other users to resume playing
