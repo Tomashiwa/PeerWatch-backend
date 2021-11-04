@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { check, validationResult } = require("express-validator");
 const db = require("../../services/db");
+const { redisClient } = require("../../services/redis");
 require("dotenv").config();
 
 router.use(bodyParser.urlencoded({ extended: true }));
@@ -13,10 +14,12 @@ router.use(bodyParser.json());
 
 const resetIDEmailMap = new Map();
 const emailResetIDMap = new Map();
+const RESET_PREFIX_EMAIL = "RESET_EMAIL";
+const EMAIL_PREFIX_RESET = "EMAIL_RESET";
 const endpoint =
 	process.env.NODE_ENV === "production"
 		? "http://peerwatch.ap-southeast-1.elasticbeanstalk.com/"
-		: "http://localhost:8080/";
+		: "http://localhost:3000/";
 
 const checkEmailExist = (email) => {
 	if (typeof email === "undefined") {
@@ -71,7 +74,7 @@ const resetValidation = [
 router.post("/recover", async (req, res) => {
 	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
 	const email = req.body.email;
-	db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+	db.query(selectUserSQl, email, async (selectUserErr, selectUserRes) => {
 		if (selectUserRes == null || selectUserRes.length == 0) {
 			console.log("email not found");
 			return res.status(401).json({
@@ -81,6 +84,15 @@ router.post("/recover", async (req, res) => {
 		const email = selectUserRes[0].email;
 
 		// Check if password reset request for email already exists.
+		let resetID = await redisClient.get(`${EMAIL_PREFIX_RESET}_${email}`);
+		if (!resetID) {
+			resetID = crypto.randomBytes(16).toString("hex");
+			await redisClient.set(`${RESET_PREFIX_EMAIL}_${resetID}`, email);
+			await redisClient.set(`${EMAIL_PREFIX_RESET}_${email}`, resetID);
+			console.log(`random ID mapped to email: ${resetID}`);
+		}
+		
+		/*
 		let resetID = emailResetIDMap.get(email);
 		if (typeof existingResetID === "undefined") {
 			// map some random id to email to keep track
@@ -89,6 +101,7 @@ router.post("/recover", async (req, res) => {
 			emailResetIDMap.set(email, resetID);
 			console.log(`random ID mapped to email: ${resetID}`);
 		}
+		*/
 
 		// use hashed password as secret.
 		const password = selectUserRes[0].password;
@@ -149,67 +162,85 @@ Peerwatch Team`,
 	});
 });
 
-router.post("/authreset", (req, res) => {
-	const resetID = req.body.rid;
-	if (resetID === null) {
-		// no random id provided
-		console.log("resetID not given");
+router.post("/authreset", async (req, res) => {
+	try {
+		const resetID = req.body.rid;
+		if (typeof resetID === "undefined") {
+			// no random id provided
+			console.log("resetID not given");
 
-		return res.status(401).json({
-			message: "Reset ID invalid.",
-		});
-	}
-
-	// get email from mapped random ID
-	const email = resetIDEmailMap.get(resetID);
-	if (typeof email === "undefined") {
-		// somehow email not mapped or invalid
-		console.log("email not mapped");
-
-		return res.status(401).json({
-			message: "Reset ID invalid.",
-		});
-	}
-
-	const authHeader = req.headers["authorization"];
-	const resetToken = authHeader && authHeader.split(" ")[1];
-	if (typeof resetToken === "undefined") {
-		// no token
-		console.log("resetToken not given");
-
-		return res.status(401).json({
-			message: "Reset Token invalid.",
-		});
-	}
-
-	// Use email to find account's old password from DB to verify jwt token
-	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
-	db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
-		if (selectUserRes == null || selectUserRes.length == 0) {
-			console.log("Account somehow not found");
 			return res.status(401).json({
-				message: "Invalid email.",
+				message: "Reset ID invalid.",
 			});
 		}
-		const oldPassword = selectUserRes[0].password;
-		// check if token invalid or expired.
-		jwt.verify(resetToken, oldPassword, (err, account) => {
-			if (err) {
-				// token expired or invalid
-				console.log("token invalid or expired");
 
+		// get email from mapped random ID
+		const email = await redisClient.get(`${RESET_PREFIX_EMAIL}_${resetID}`);
+		if (!email) {
+			// somehow email not mapped or invalid;
+			console.log("email not mapped");
+			
+			return res.status(401).json({
+				message: "Reset ID invalid.",
+			});
+		}
+		
+		/*
+		const email = resetIDEmailMap.get(resetID);
+		if (typeof email === "undefined") {
+			// somehow email not mapped or invalid
+			console.log("email not mapped");
+
+			return res.status(401).json({
+				message: "Reset ID invalid.",
+			});
+		}
+		*/
+
+		const authHeader = req.headers["authorization"];
+		const resetToken = authHeader && authHeader.split(" ")[1];
+		if (typeof resetToken === "undefined") {
+			// no token
+			console.log("resetToken not given");
+
+			return res.status(401).json({
+				message: "Reset Token invalid.",
+			});
+		}
+
+		// Use email to find account's old password from DB to verify jwt token
+		const selectUserSQl = "SELECT * FROM users WHERE email = ?";
+		db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
+			if (selectUserRes == null || selectUserRes.length == 0) {
+				console.log("Account somehow not found");
 				return res.status(401).json({
-					message: "Invalid link.",
-				});
-			} else {
-				console.log("token verified");
-
-				return res.status(200).json({
-					message: "Reset token verified.",
+					message: "Invalid email.",
 				});
 			}
+			const oldPassword = selectUserRes[0].password;
+			// check if token invalid or expired.
+			jwt.verify(resetToken, oldPassword, (err, account) => {
+				if (err) {
+					// token expired or invalid
+					console.log("token invalid or expired");
+
+					return res.status(401).json({
+						message: "Invalid link.",
+					});
+				} else {
+					console.log("token verified");
+
+					return res.status(200).json({
+						message: "Reset token verified.",
+					});
+				}
+			});
 		});
-	});
+	} catch (err) {
+		console.log("something went wrong in authreset");
+		console.log(err.message);
+		return res.status(500).send(err.message);
+	}
 });
 
 router.put("/reset", resetValidation, async (req, res) => {
@@ -225,6 +256,16 @@ router.put("/reset", resetValidation, async (req, res) => {
 		}
 
 		// get email from mapped random ID
+		const email = await redisClient.get(`${RESET_PREFIX_EMAIL}_${resetID}`);
+		if (!email) {
+			// somehow email not mapped or invalid;
+			console.log("email not mapped");
+			
+			return res.status(401).json({
+				message: "Reset ID invalid.",
+			});
+		}
+		/*
 		const email = resetIDEmailMap.get(resetID);
 		if (typeof email === "undefined") {
 			// somehow email not mapped or invalid
@@ -234,7 +275,8 @@ router.put("/reset", resetValidation, async (req, res) => {
 				message: "Reset ID invalid.",
 			});
 		}
-
+		*/
+		
 		// if password has validation error
 		const errors = await validationResult(req);
 		if (!errors.isEmpty()) {
@@ -248,7 +290,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 		db.query(
 			updatePasswordSQL,
 			[newPassword, email],
-			(updatePasswordErr, updatePasswordRes) => {
+			async (updatePasswordErr, updatePasswordRes) => {
 				if (updatePasswordRes.affectedRows == 0) {
 					return res.status(401).json({
 						message: "Invalid email.",
@@ -256,8 +298,10 @@ router.put("/reset", resetValidation, async (req, res) => {
 				}
 
 				// delete mapping since able to reset
-				resetIDEmailMap.delete(resetID);
-				emailResetIDMap.delete(email);
+				await redisClient.del(`${RESET_PREFIX_EMAIL}_${resetID}`);
+				await redisClient.del(`${EMAIL_PREFIX_RESET}_${email}`);
+				//resetIDEmailMap.delete(resetID);
+				//emailResetIDMap.delete(email);
 				console.log("Password resetted");
 				return res.status(200).json({
 					message: "Password resetted successfully.",
