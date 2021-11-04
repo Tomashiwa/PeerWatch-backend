@@ -63,13 +63,11 @@ function Room() {
 		(userId) => {
 			if (userId === user.userId) {
 				history.push("/");
-				console.log("GOT KICKED");
 			}
 		},
 		[user, history]
 	);
 	const kickCallback = (userId) => {
-		console.log(`Kick user ${userId}`);
 		chatSocket.emit("SEND_KICK", id, userId);
 	};
 
@@ -128,13 +126,11 @@ function Room() {
 						})
 						.catch((err) => {
 							history.push("/room_notfound");
-							console.log(err);
 						});
 				}
 			})
 			.catch((err) => {
 				history.push("/room_notfound");
-				console.log(err);
 			});
 
 		return () => {

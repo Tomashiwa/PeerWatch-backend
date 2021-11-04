@@ -58,9 +58,7 @@ function VideoPlayer({
 
 	// Initialize player with an URL
 	const initialize = useCallback(() => {
-		socket.emit("join-room", roomId, () => {
-			console.log(`${socket.id} has joined the video room`);
-		});
+		socket.emit("join-room", roomId, () => {});
 	}, [socket, roomId]);
 
 	// Ping server to ask if room is avaliable
