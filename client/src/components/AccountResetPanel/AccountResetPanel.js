@@ -39,11 +39,11 @@ function AccountResetPanel() {
 		axios
 			.post("/api/auth/authreset", { rid: rid }, config)
 			.then((res) => {
-				console.log(res.data.message);
+				//console.log(res.data.message);
 			})
 			.catch((err) => {
 				if (err.response) {
-					console.log(err.response.data.message);
+					//console.log(err.response.data.message);
 				}
 				setIsValid(false);
 			});
@@ -57,9 +57,9 @@ function AccountResetPanel() {
 
 	const resetPass = (e) => {
 		e.preventDefault();
-		console.log(
-			`random id: ${rid}, reset token: ${resetToken}, password: ${newPassRef.current.value}, repeat password: ${repeatPassRef.current.value}`
-		);
+		//console.log(
+		//	`random id: ${rid}, reset token: ${resetToken}, password: ${newPassRef.current.value}, repeat password: ${repeatPassRef.current.value}`
+		//);
 
 		resetErrors();
 
@@ -70,7 +70,7 @@ function AccountResetPanel() {
 				repeatedPassword: repeatPassRef.current.value,
 			})
 			.then((res) => {
-				console.log(res.data.message);
+				//console.log(res.data.message);
 
 				returnHome();
 			})
