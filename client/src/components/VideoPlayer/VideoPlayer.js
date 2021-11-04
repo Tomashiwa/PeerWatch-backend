@@ -217,14 +217,13 @@ function VideoPlayer({
 
 	// Assign new bufferer when current bufferer disconnects
 	const setBufferer = useCallback(
-		(newBuffererId) => {
+		(newBuffererId, newHostId) => {
 			setBuffererId(newBuffererId);
-			if (user.isHost) {
+			if (user.isHost || socket.id === newHostId) {
 				setIsPlaying(true);
 			}
-			console.log(`New bufferer: ${newBuffererId}`);
 		},
-		[user]
+		[user, socket]
 	);
 
 	// Reset when bufferer disconnects and left this user stranding
