@@ -5,11 +5,6 @@ export const RoomPageWrapper = styled.div`
 	min-height: 100%;
 	height: auto;
 
-	// display: flex;
-	// flex-direction: column;
-	// justify-content: center;
-	// align-items: center;
-
 	display: grid;
 	grid-template-columns: auto;
 	place-items: center;
@@ -23,8 +18,6 @@ export const RoomPageWrapper = styled.div`
 
 export const RoomContainerWrapper = styled.div`
 	width: 98%;
-	// height: 75%;
-	// max-height: 75%;
 
 	display: grid;
 	grid-template-rows: none;

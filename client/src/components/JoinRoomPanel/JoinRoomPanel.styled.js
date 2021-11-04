@@ -1,6 +1,7 @@
 import { styled as mStyled } from "@mui/material/styles";
 import { TextField, Button } from "@mui/material";
 import { theme } from "../../styles/theme";
+import styled from "styled-components";
 
 export const TextFieldWrapper = mStyled(TextField)({
 	width: "100%",
@@ -19,3 +20,14 @@ export const ButtonWrapper = mStyled(Button)({
 		background: theme.darkOrange,
 	},
 });
+
+export const FormWrapper = styled.form`
+	width: 100%;
+	height: 100%;
+
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-row-gap: 1em;
+	align-items: center;
+	justify-items: center;
+`;

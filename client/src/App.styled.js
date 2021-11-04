@@ -4,20 +4,12 @@ const AppWrapper = styled.div`
 	height: 100%;
 	max-height: 100%;
 
-	// display: flex;
-	// flex-direction: column;
-
 	display: grid;
 	grid-template-rows: auto 1fr;
 
 	background: ${(props) => props.theme.lightGray};
 
-	.app-navbar {
-		// flex-grow: 0;
-	}
-
 	.app-content {
-		// flex-grow: 1;
 		overflow: auto;
 	}
 
