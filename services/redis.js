@@ -4,8 +4,13 @@ const { promisify } = require("util");
 
 const pubClient = createClient({ host: "localhost", port: 6379 });
 const subClient = pubClient.duplicate();
-const client = createClient({ host: "localhost", port: 6379 });
 
+const client = createClient({ host: "localhost", port: 6379 });
+client.on("error", (err) => {
+	console.log(err);
+});
+
+// Keys
 const exists = promisify(client.exists).bind(client);
 
 // Strings
