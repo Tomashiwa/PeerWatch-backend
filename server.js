@@ -1,7 +1,7 @@
 const ping = require("./routes/api/ping");
 const express = require("express");
 const app = express();
-cors = require("cors");
+const cors = require("cors");
 const { instrument } = require("@socket.io/admin-ui");
 const path = require("path");
 const compression = require("compression");
