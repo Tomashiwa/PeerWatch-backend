@@ -51,6 +51,7 @@ function VideoPlayer({
 				Math.abs(playerRef.current.getCurrentTime() - timing) > THRESHOLD_SYNC
 			) {
 				playerRef.current.seekTo(timing, "seconds");
+				console.log(`Sync-ing to ${timing}`);
 			}
 		},
 		[isPlaying, buffererId, socket, isWaiting]
@@ -124,6 +125,7 @@ function VideoPlayer({
 		setIsPlaying(true);
 	}, []);
 	const playCallback = () => {
+		console.log("PLAYS");
 		if (!isPlaying) {
 			socket.emit("PLAY_ALL", roomId);
 			setIsPlaying(true);
@@ -135,6 +137,7 @@ function VideoPlayer({
 		setIsPlaying(false);
 	}, []);
 	const pauseCallback = () => {
+		console.log("PAUSE");
 		if (isPlaying && buffererId === UNAVALIABLE) {
 			socket.emit("PAUSE_ALL", roomId);
 			setIsPlaying(false);
@@ -155,6 +158,7 @@ function VideoPlayer({
 		(sourceId) => {
 			debouncedSetPlaying(false);
 			setBuffererId(sourceId);
+			console.log(`${sourceId} HOLDs`);
 		},
 		[debouncedSetPlaying]
 	);
@@ -163,6 +167,7 @@ function VideoPlayer({
 			setBuffererId(socket.id);
 			socket.emit("REQUEST_HOLD", roomId, socket.id);
 			setIsPlaying(true);
+			console.log(`Starts buffering`);
 		}
 	}, [socket, buffererId, roomId]);
 
@@ -171,45 +176,52 @@ function VideoPlayer({
 		(newTiming) => {
 			playerRef.current.seekTo(newTiming);
 			debouncedSetPlaying(true);
+			console.log(`Requested to release at ${newTiming}`);
 		},
 		[debouncedSetPlaying]
 	);
 	const release = useCallback(() => {
 		debouncedSetPlaying(true);
 		setBuffererId(UNAVALIABLE);
+		console.log("Release");
 	}, [debouncedSetPlaying]);
 	const bufferEndCallback = () => {
+		console.log("BUFFER END");
 		if (buffererId === socket.id) {
 			if (isInitialSync) {
 				socket.emit("REQUEST_RELEASE_ALL", roomId);
 				setIsInitialSync(false);
 				setBuffererId(UNAVALIABLE);
+				console.log("Initial sync, request all to release");
 			} else {
 				if (users.length === 1) {
 					socket.emit("REQUEST_RELEASE_ALL", roomId);
 					setIsInitialSync(false);
 					setBuffererId(UNAVALIABLE);
+					console.log("Only 1 user sync-ing, request all to release");
 				} else {
 					debouncedSetPlaying(false);
 					socket.emit("REQUEST_RELEASE", roomId, playerRef.current.getCurrentTime());
+					console.log("> 1 user sync-ing, request all to start release");
 				}
 			}
 		} else if (buffererId !== UNAVALIABLE && buffererId !== socket.id) {
 			debouncedSetPlaying(false);
 			socket.emit("REQUEST_RELEASE_READY", roomId, buffererId, release);
 			setBuffererId(UNAVALIABLE);
+			console.log("Now ready, telling bufferer");
 		}
 	};
 
 	// Assign new bufferer when current bufferer disconnects
 	const setBufferer = useCallback(
-		(newBuffererId) => {
+		(newBuffererId, newHostId) => {
 			setBuffererId(newBuffererId);
-			if (user.isHost) {
+			if (user.isHost || socket.id === newHostId) {
 				setIsPlaying(true);
 			}
 		},
-		[user]
+		[user, socket]
 	);
 
 	// Reset when bufferer disconnects and left this user stranding
@@ -220,6 +232,7 @@ function VideoPlayer({
 				setIsPlaying(true);
 				playerRef.current.seekTo(0, "seconds");
 			}
+			console.log(`Reset as bufferer disconnects and left`);
 		}
 	}, [socket, user]);
 
@@ -260,6 +273,8 @@ function VideoPlayer({
 
 	// Callback when the player completed initial loading and ready to go
 	const readyCallback = (player) => {
+		console.log("Ready to play");
+
 		// Attach callback for change in playback rate
 		player.getInternalPlayer().addEventListener("onPlaybackRateChange", rateChangeCallback);
 

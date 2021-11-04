@@ -1,12 +1,8 @@
-const retrieveUserLists = () => {
-	//some way to retrieve current user list from DB?
-};
+const { redisClient } = require("./redis");
 
-const socketUserMap = new Map();
-// Mapping a user to the room it is in
-const userRoomMap = new Map();
-// Mapping a room to all the users in the room
-const roomUsersMap = new Map();
+const ROOM_PREFIX_SOCKETUSER = "ROOM_SOCKETUSER";
+const ROOM_PREFIX_USERROOM = "ROOM_USERROOM";
+const ROOM_PREFIX_ROOMUSERS = "ROOM_ROOMUSERS";
 
 module.exports = (io) => {
 	const roomIO = io.of("/chat");
@@ -36,50 +32,86 @@ module.exports = (io) => {
 		});
 
 		// join the client to the room "number" received.
-		socket.on("join-room", (roomId, userId, callback) => {
+		socket.on("join-room", async (roomId, userId, callback) => {
 			console.log(`${socket.id} has joined the room ${roomId}`);
 			socket.join(roomId);
 
 			// Update mapping
-			socketUserMap.set(socket.id, userId);
-			userRoomMap.set(userId, roomId); // To-do. change to multiple rooms ?
+			const appendSocketUser = redisClient.set(
+				`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`,
+				userId
+			);
+			const appendUserRoom = redisClient.set(`${ROOM_PREFIX_USERROOM}_${userId}`, roomId);
+			Promise.all([appendSocketUser, appendUserRoom])
+				.then((results) => console.log(results))
+				.catch((err) => console.log(err));
 
-			let newList;
-			if (roomUsersMap.has(roomId)) {
-				newList = roomUsersMap.get(roomId);
-				newList.push(userId);
-				roomUsersMap.set(roomId, newList);
-				roomIO.in(roomId).emit("update-user-list", newList, newList[0]);
-			} else {
-				newList = [userId];
-				roomUsersMap.set(roomId, newList);
-				roomIO.in(roomId).emit("update-user-list", newList, userId);
-			}
-
-			callback();
+			// Emit new user list
+			const key = `${ROOM_PREFIX_ROOMUSERS}_${roomId}`;
+			const existsRoomUsers = redisClient.exists(key);
+			const membersRoomUsers = redisClient.smembers(key);
+			const addRoomUsers = redisClient.sadd(key, userId);
+			let newUsers;
+			existsRoomUsers
+				.then((existsRes) => {
+					membersRoomUsers
+						.then((users) => {
+							newUsers = users.map((user) => parseInt(user));
+							newUsers.push(userId);
+							return addRoomUsers;
+						})
+						.then((addRes) => {
+							roomIO.in(roomId).emit("update-user-list", newUsers, newUsers[0]);
+							callback();
+						});
+				})
+				.catch((existsErr) => {
+					addRoomUsers.then((addRes) => {
+						roomIO.in(roomId).emit("update-user-list", [userId], userId);
+						callback();
+					});
+				});
 		});
 
-		socket.on("disconnect", function () {
-			if (
-				!socketUserMap.has(socket.id) ||
-				!userRoomMap.has(socketUserMap.get(socket.id)) ||
-				!roomUsersMap.has(userRoomMap.get(socketUserMap.get(socket.id)))
-			) {
+		socket.on("disconnect", async function () {
+			const userId = await redisClient.get(`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`);
+			if (!userId) {
+				console.log("userId not found");
 				return;
 			}
-			const userId = socketUserMap.get(socket.id);
-			const roomId = userRoomMap.get(userId);
 
-			let newUserList = roomUsersMap.get(roomId);
-			for (let i = 0; i < newUserList.length; i++) {
-				if (newUserList[i] === userId) {
-					newUserList.splice(i, 1);
-				}
+			const roomId = await redisClient.get(`${ROOM_PREFIX_USERROOM}_${userId}`);
+			if (!roomId) {
+				console.log("roomId not found");
+				return;
 			}
 
-			socketUserMap.delete(socket.id);
-			roomUsersMap.set(roomId, newUserList);
-			socket.to(roomId).emit("update-user-list", newUserList, newUserList[0]);
+			const users = await redisClient.smembers(`${ROOM_PREFIX_ROOMUSERS}_${roomId}`);
+			if (!users) {
+				console.log("users not found");
+				return;
+			}
+
+			let newUsers = users.filter((user) => user !== userId).map((user) => parseInt(user));
+
+			const deleteSocketUser = redisClient.del(`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`);
+			const deleteUserRoom = redisClient.del(`${ROOM_PREFIX_USERROOM}_${userId}`);
+			Promise.all([deleteSocketUser, deleteUserRoom])
+				.then(async (res) => {
+					console.log("deletion sucess");
+					const removeRes = await redisClient.srem(
+						`${ROOM_PREFIX_ROOMUSERS}_${roomId}`,
+						userId
+					);
+					if (!removeRes) {
+						console.log("remove from set failed");
+						return;
+					}
+					socket.to(roomId).emit("update-user-list", newUsers, newUsers[0]);
+				})
+				.catch((err) => {
+					console.log(err);
+				});
 		});
 	});
 };
