@@ -12,8 +12,6 @@ require("dotenv").config();
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-const resetIDEmailMap = new Map();
-const emailResetIDMap = new Map();
 const RESET_PREFIX_EMAIL = "RESET_EMAIL";
 const EMAIL_PREFIX_RESET = "EMAIL_RESET";
 const endpoint =
