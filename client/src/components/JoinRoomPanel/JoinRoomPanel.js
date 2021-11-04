@@ -2,7 +2,7 @@ import { Typography } from "@mui/material";
 import React, { useContext, useRef, useState } from "react";
 import { useHistory } from "react-router";
 import Panel from "../Panel/Panel";
-import { ButtonWrapper, TextFieldWrapper } from "./JoinRoomPanel.styled";
+import { ButtonWrapper, FormWrapper, TextFieldWrapper } from "./JoinRoomPanel.styled";
 import { validate as uuidValidate } from "uuid";
 import UserContext from "../Context/UserContext";
 import axios from "axios";
@@ -18,7 +18,9 @@ function JoinRoomPanel() {
 	const [hasError, setHasError] = useState(false);
 	const [errorMsg, setErrorMsg] = useState("");
 
-	const join = async () => {
+	const join = (e) => {
+		e.preventDefault();
+
 		const id = inputRef.current.value;
 		if (!uuidValidate(id)) {
 			setHasError(true);
@@ -54,16 +56,18 @@ function JoinRoomPanel() {
 	return (
 		<Panel>
 			<Typography variant="h5">Jump in with your friends!</Typography>
-			<TextFieldWrapper
-				id="textfield-join-code"
-				placeholder="Enter room code here..."
-				inputRef={inputRef}
-				error={hasError}
-				helperText={hasError ? errorMsg : ""}
-			/>
-			<ButtonWrapper variant="contained" onClick={join}>
-				Join
-			</ButtonWrapper>
+			<FormWrapper onSubmit={join}>
+				<TextFieldWrapper
+					id="textfield-join-code"
+					placeholder="Enter room code here..."
+					inputRef={inputRef}
+					error={hasError}
+					helperText={hasError ? errorMsg : ""}
+				/>
+				<ButtonWrapper variant="contained" type="submit">
+					Join
+				</ButtonWrapper>
+			</FormWrapper>
 		</Panel>
 	);
 }
