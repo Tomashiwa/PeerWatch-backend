@@ -19,6 +19,9 @@ const endpoint =
 		: "http://localhost:8080/";
 
 const checkEmailExist = (email) => {
+	if (typeof email === "undefined") {
+		return false;
+	}
 	const selectUserSQl = "SELECT * FROM users WHERE email = ?";
 	return new Promise((resolve, reject) => {
 		db.query(selectUserSQl, email, (selectUserErr, selectUserRes) => {
@@ -131,9 +134,18 @@ Peerwatch Team`,
 			console.log(body);
 		});
 
-		return res.status(200).json({
-			message: "Email sent",
-		});
+		// For testing
+		if (process.env.NODE_ENV === "production") {
+			return res.status(200).json({
+				message: "Email sent"
+			});
+		} else {
+			return res.status(200).json({
+				message: "Email sent",
+				resetID: resetID,
+				resetToken: resetToken
+			});
+		}
 	});
 });
 
@@ -161,7 +173,7 @@ router.post("/authreset", (req, res) => {
 
 	const authHeader = req.headers["authorization"];
 	const resetToken = authHeader && authHeader.split(" ")[1];
-	if (resetToken === null) {
+	if (typeof resetToken === "undefined") {
 		// no token
 		console.log("resetToken not given");
 
@@ -203,7 +215,7 @@ router.post("/authreset", (req, res) => {
 router.put("/reset", resetValidation, async (req, res) => {
 	try {
 		const resetID = req.body.rid;
-		if (resetID === null) {
+		if (typeof resetID === "undefined") {
 			// no random id
 			console.log("resetID not given");
 
@@ -214,7 +226,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 
 		// get email from mapped random ID
 		const email = resetIDEmailMap.get(resetID);
-		if (typeof email === undefined) {
+		if (typeof email === "undefined") {
 			// somehow email not mapped or invalid
 			console.log("email not mapped");
 

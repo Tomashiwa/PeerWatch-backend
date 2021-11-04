@@ -55,3 +55,5 @@ require("./services/videoKit")(io);
 
 // Admin tool for socket.io
 instrument(io, { auth: false, namespaceName: "/" });
+
+module.exports = app;
