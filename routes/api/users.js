@@ -17,7 +17,7 @@ router.get("/createtable", (req, res) => {
 });
 
 router.post("/create", (req, res) => {
-    const { email, name, password, isGoogle } = req.body;
+    const { email, name, password } = req.body;
     if (!name || !password || !email) {
         return res.status(400).json({message: "Please enter all fields (email, name & password) to become an user"});
     }
@@ -29,7 +29,6 @@ router.post("/create", (req, res) => {
             "email": email,
             "display_name": name,
             "password": hash,
-            "is_google": !!isGoogle
         };
         const sql = "INSERT INTO users SET ?";
         db.query(sql, newUser, (derr, dres) => {
@@ -43,7 +42,7 @@ router.post("/create", (req, res) => {
 });
 
 router.post("/login", (req, res) => {
-    const { email, password, isGoogle } = req.body;
+    const { email, password } = req.body;
     if (!password || !email) {
         return res.status(400).json({message: "Please enter all fields (email & password) to login"});
     }
@@ -61,9 +60,7 @@ router.post("/login", (req, res) => {
             if (err) {
                 return res.status(500).json({message: err.message});
             }
-            if (dres[0].is_google == 1) {
-                res.status(500).json({message: "Please login via Google Auth"})
-            } else if (comparison) {
+            if (comparison) {
                 res.status(200).json({message: "Login success"});
             } else {
                 res.status(500).json({message: "Wrong password"});
