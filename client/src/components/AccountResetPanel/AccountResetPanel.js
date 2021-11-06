@@ -36,11 +36,9 @@ function AccountResetPanel() {
 
 	useEffect(() => {
 		const config = { headers: { Authorization: `Bearer ${resetToken}` } };
-		axios
-			.post("/api/auth/authreset", { rid: rid }, config)
-			.catch((err) => {
-				setIsValid(false);
-			});
+		axios.post("/api/auth/authreset", { rid: rid }, config).catch((err) => {
+			setIsValid(false);
+		});
 	}, [resetToken, rid]);
 
 	useEffect(() => {
