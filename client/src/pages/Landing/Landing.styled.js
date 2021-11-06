@@ -1,11 +1,6 @@
 import styled from "styled-components";
 
 const LandingPageWrapper = styled.div`
-	// display: flex;
-	// flex-direction: column;
-	// align-items: center;
-	// justify-content: center;
-
 	display: grid;
 	grid-template-columns: auto;
 	place-items: center;
