@@ -329,7 +329,6 @@ router.post("/register", registerValidation, async (req, res) => {
 			email: email,
 			displayName: req.body.displayName,
 			password: password,
-			isGoogle: false,
 		};
 
 		const insertUserSQL = "INSERT INTO users SET ?";
@@ -375,7 +374,6 @@ router.post("/login", async (req, res) => {
 				email: selectUserRes[0].email,
 				displayName: selectUserRes[0].displayName,
 				password: selectUserRes[0].password,
-				isGoogle: selectUserRes[0].isGoogle,
 			};
 			bcrypt.compare(req.body.password, account.password, (err, comparison) => {
 				// can change duration here to test expiry
