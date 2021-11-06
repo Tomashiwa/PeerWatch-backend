@@ -47,7 +47,5 @@ jobs:
                 mysql --host 127.0.0.1 --port 3306 -uroot -proot < ./sql/peerwatch_users_in_rooms.sql
           - name: Install dependencies
             run: npm run install-all
-          - name: Cypress tests
-            run: npm run cypress-test
           - name: Mocha Chai tests
             run: npm run mocha-test
