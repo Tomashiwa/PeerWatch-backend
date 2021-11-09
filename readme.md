@@ -8,7 +8,7 @@ This project is a web application to allow users to watch YouTube videos togethe
 
 Production Website: http://peerwatch.ap-southeast-1.elasticbeanstalk.com/
 
-Project Report: [G37 PeerWatch](docs/G11_ChairVisE4.0.pdf)
+Project Report: [G37 PeerWatch](37-FinalReport-1.pdf)
 
 ##### Installation Guide
 
@@ -36,8 +36,8 @@ LOCAL_DB_PORT=3306
 4. Start up a local MySQL database that uses the credential stated in `.env`
 5. Open up MySQL Workbench, connect to your local database and run the SQL scripts in `./sql` to construct the necessary tables
 6. Start up a local Redis server by running `redis-server` in a terminal of your choice
-8. Run `npm run dev`
-9. Access the application through http://localhost:3000
+7. Run `npm run dev`
+8. Access the application through http://localhost:3000
 
 ##### Technology stack
 
