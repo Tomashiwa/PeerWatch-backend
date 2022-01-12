@@ -2,16 +2,21 @@ const { createAdapter } = require("@socket.io/redis-adapter");
 const { createClient } = require("redis");
 const { promisify } = require("util");
 
-// console.log("NODE_ENV:", process.env.NODE_ENV);
-// console.log("REDIS_URL: ", process.env?.REDIS_URL);
-const host = process.env.REDIS_URL || "localhost";
-console.log("host:", host);
+// const host = process.env.REDIS_URL || "localhost";
+// console.log("host:", host);
 // const host = process.env.NODE_ENV === "production" ? "54.179.111.98" : "localhost";
 
-const pubClient = createClient({ host, port: 6379 });
+const args = {
+	...(process.env.REDIS_URL && { url: process.env.REDIS_URL }),
+	...(!process.env.NODE_ENV && { host: "localhost" }),
+	port: 6379,
+};
+console.log(args);
+
+const pubClient = createClient(args);
 const subClient = pubClient.duplicate();
 
-const client = createClient({ host, port: 6379 });
+const client = createClient(args);
 client.on("error", (err) => {
 	console.log(err);
 });
