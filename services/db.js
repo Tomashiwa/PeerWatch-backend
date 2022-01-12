@@ -11,8 +11,9 @@ const pool = mysql.createPool({
 	host: process.env.NODE_ENV === "production" ? process.env.DB_HOST : process.env.LOCAL_DB_HOST,
 	port: process.env.NODE_ENV === "production" ? process.env.DB_PORT : process.env.LOCAL_DB_PORT,
 	user: process.env.NODE_ENV === "production" ? process.env.DB_USER : process.env.LOCAL_DB_USER,
-	password: process.env.NODE_ENV === "production" ? process.env.DB_PASS : process.env.LOCAL_DB_PASS,
-	database: "peerwatch",
+	password:
+		process.env.NODE_ENV === "production" ? process.env.DB_PASS : process.env.LOCAL_DB_PASS,
+	database: process.env.NODE_ENV === "production" ? process.env.DB_NAME : "peerwatch",
 	multipleStatements: true,
 	connectionLimit: 75,
 });
