@@ -27,8 +27,7 @@ const io = new Server(server, {
 		origin: [
 			"http://localhost:3000",
 			"https://admin.socket.io/",
-			"http://13.250.235.202:3000/",
-			"http://peerwatch.ap-southeast-1.elasticbeanstalk.com/",
+			"https://peerwatch.netlify.app",
 		],
 		credentials: false,
 	},
