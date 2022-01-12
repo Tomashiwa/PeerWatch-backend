@@ -2,7 +2,6 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const { instrument } = require("@socket.io/admin-ui");
-const path = require("path");
 const compression = require("compression");
 
 const ping = require("./routes/api/ping");
@@ -17,14 +16,6 @@ app.use(compression());
 app.get("/api/ping", ping);
 app.use("/api/rooms", rooms);
 app.use("/api/auth", auth);
-
-// Serve static assets if in production
-if (process.env.NODE_ENV === "production") {
-	app.use(express.static("client/build"));
-	app.get("*", (req, res) => {
-		res.sendFile(path.resolve(__dirname, "client", "build", "index.html"));
-	});
-}
 
 const port = process.env.PORT || "8080";
 const server = app.listen(port, () => {
@@ -49,8 +40,6 @@ io.adapter(adapter);
 // Add events, middlewares and other addons to the socket
 require("./services/roomKit")(io);
 require("./services/videoKit")(io);
-
-// pubClient.duplicate().set()
 
 // Admin tool for socket.io
 instrument(io, { auth: false, namespaceName: "/" });
