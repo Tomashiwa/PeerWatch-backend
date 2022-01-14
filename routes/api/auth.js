@@ -105,7 +105,7 @@ router.post("/recover", async (req, res) => {
 		const resetToken = jwt.sign({ email: email }, password, { expiresIn: "15m" });
 		console.log(`signed reset token: ${resetToken}`);
 
-		const link = endpoint + "reset/" + resetID + "/" + resetToken;
+		const link = endpoint + "/reset/" + resetID + "/" + resetToken;
 		console.log(`link: ${link}`);
 		console.log(`user: ${process.env.EMAIL_USER}`);
 		console.log(`pass: ${process.env.EMAIL_PASS}`);
