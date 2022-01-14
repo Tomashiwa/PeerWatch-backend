@@ -107,6 +107,8 @@ router.post("/recover", async (req, res) => {
 
 		const link = endpoint + "reset/" + resetID + "/" + resetToken;
 		console.log(`link: ${link}`);
+		console.log(`user: ${process.env.EMAIL_USER}`);
+		console.log(`pass: ${process.env.EMAIL_PASS}`);
 
 		//send email
 		const transporter = nodemailer.createTransport({
