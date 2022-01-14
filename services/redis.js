@@ -2,10 +2,6 @@ const { createAdapter } = require("@socket.io/redis-adapter");
 const { createClient } = require("redis");
 const { promisify } = require("util");
 
-// const host = process.env.REDIS_URL || "localhost";
-// console.log("host:", host);
-// const host = process.env.NODE_ENV === "production" ? "54.179.111.98" : "localhost";
-
 const args = {
 	...(process.env.REDIS_URL && { url: process.env.REDIS_URL }),
 	...(!process.env.NODE_ENV && { host: "localhost" }),

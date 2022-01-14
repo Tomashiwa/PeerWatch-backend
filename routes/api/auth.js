@@ -7,6 +7,7 @@ const nodemailer = require("nodemailer");
 const { check, validationResult } = require("express-validator");
 const db = require("../../services/db");
 const { redisClient } = require("../../services/redis");
+const { PROD_FRONTEND_URL, LOCAL_FRONTEND_URL } = require("../../config");
 require("dotenv").config();
 
 router.use(bodyParser.urlencoded({ extended: true }));
@@ -14,10 +15,7 @@ router.use(bodyParser.json());
 
 const RESET_PREFIX_EMAIL = "RESET_EMAIL";
 const EMAIL_PREFIX_RESET = "EMAIL_RESET";
-const endpoint =
-	process.env.NODE_ENV === "production"
-		? "http://peerwatch.ap-southeast-1.elasticbeanstalk.com/"
-		: "http://localhost:3000/";
+const endpoint = process.env.NODE_ENV === "production" ? PROD_FRONTEND_URL : LOCAL_FRONTEND_URL;
 
 const checkEmailExist = (email) => {
 	if (typeof email === "undefined") {
@@ -89,7 +87,7 @@ router.post("/recover", async (req, res) => {
 			await redisClient.set(`${EMAIL_PREFIX_RESET}_${email}`, resetID);
 			console.log(`random ID mapped to email: ${resetID}`);
 		}
-		
+
 		/*
 		let resetID = emailResetIDMap.get(email);
 		if (typeof existingResetID === "undefined") {
@@ -148,13 +146,13 @@ Peerwatch Team`,
 		// For testing
 		if (process.env.NODE_ENV === "production") {
 			return res.status(200).json({
-				message: "Email sent"
+				message: "Email sent",
 			});
 		} else {
 			return res.status(200).json({
 				message: "Email sent",
 				resetID: resetID,
-				resetToken: resetToken
+				resetToken: resetToken,
 			});
 		}
 	});
@@ -177,12 +175,12 @@ router.post("/authreset", async (req, res) => {
 		if (!email) {
 			// somehow email not mapped or invalid;
 			console.log("email not mapped");
-			
+
 			return res.status(401).json({
 				message: "Reset ID invalid.",
 			});
 		}
-		
+
 		/*
 		const email = resetIDEmailMap.get(resetID);
 		if (typeof email === "undefined") {
@@ -258,7 +256,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 		if (!email) {
 			// somehow email not mapped or invalid;
 			console.log("email not mapped");
-			
+
 			return res.status(401).json({
 				message: "Reset ID invalid.",
 			});
@@ -274,7 +272,7 @@ router.put("/reset", resetValidation, async (req, res) => {
 			});
 		}
 		*/
-		
+
 		// if password has validation error
 		const errors = await validationResult(req);
 		if (!errors.isEmpty()) {
