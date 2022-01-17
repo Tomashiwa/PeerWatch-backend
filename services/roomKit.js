@@ -48,29 +48,20 @@ module.exports = (io) => {
 
 			// Emit new user list
 			const key = `${ROOM_PREFIX_ROOMUSERS}_${roomId}`;
-			const existsRoomUsers = redisClient.exists(key);
-			const membersRoomUsers = redisClient.smembers(key);
-			const addRoomUsers = redisClient.sadd(key, userId);
-			let newUsers;
-			existsRoomUsers
-				.then((existsRes) => {
-					membersRoomUsers
-						.then((users) => {
-							newUsers = users.map((user) => parseInt(user));
-							newUsers.push(userId);
-							return addRoomUsers;
-						})
-						.then((addRes) => {
-							roomIO.in(roomId).emit("update-user-list", newUsers, newUsers[0]);
-							callback();
-						});
-				})
-				.catch((existsErr) => {
-					addRoomUsers.then((addRes) => {
-						roomIO.in(roomId).emit("update-user-list", [userId], userId);
-						callback();
-					});
-				});
+			try {
+				await redisClient.exists(key);
+				const users = await redisClient.lrange(key, 0, -1);
+				const newUsers = users.map((user) => parseInt(user));
+				newUsers.push(userId);
+
+				await redisClient.rpush(key, userId);
+				roomIO.in(roomId).emit("update-user-list", newUsers, newUsers[0]);
+				callback();
+			} catch (err) {
+				await redisClient.rpush(key, userId);
+				roomIO.in(roomId).emit("update-user-list", [userId], userId);
+				callback();
+			}
 		});
 
 		socket.on("disconnect", async function () {
@@ -86,7 +77,7 @@ module.exports = (io) => {
 				return;
 			}
 
-			const users = await redisClient.smembers(`${ROOM_PREFIX_ROOMUSERS}_${roomId}`);
+			const users = await redisClient.lrange(`${ROOM_PREFIX_ROOMUSERS}_${roomId}`, 0, -1);
 			if (!users) {
 				console.log("users not found");
 				return;
@@ -97,10 +88,11 @@ module.exports = (io) => {
 			const deleteSocketUser = redisClient.del(`${ROOM_PREFIX_SOCKETUSER}_${socket.id}`);
 			const deleteUserRoom = redisClient.del(`${ROOM_PREFIX_USERROOM}_${userId}`);
 			Promise.all([deleteSocketUser, deleteUserRoom])
-				.then(async (res) => {
+				.then(async () => {
 					console.log("deletion sucess");
-					const removeRes = await redisClient.srem(
+					const removeRes = await redisClient.lrem(
 						`${ROOM_PREFIX_ROOMUSERS}_${roomId}`,
+						0,
 						userId
 					);
 					if (!removeRes) {

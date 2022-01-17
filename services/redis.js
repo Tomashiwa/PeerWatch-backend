@@ -32,6 +32,10 @@ const srem = promisify(client.srem).bind(client);
 const sismember = promisify(client.sismember).bind(client);
 const smembers = promisify(client.smembers).bind(client);
 
+const lrange = promisify(client.lrange).bind(client);
+const rpush = promisify(client.rpush).bind(client);
+const lrem = promisify(client.lrem).bind(client);
+
 // Hashed objects
 const hget = promisify(client.hget).bind(client);
 const hgetall = promisify(client.hgetall).bind(client);
@@ -63,5 +67,8 @@ module.exports = {
 		hset,
 		hmset,
 		multi,
+		lrange,
+		rpush,
+		lrem,
 	},
 };
